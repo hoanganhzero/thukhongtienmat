@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "prisma migrate deploy && prisma db seed && next start",
     "lint": "eslint ."
   },
   "prisma": {
