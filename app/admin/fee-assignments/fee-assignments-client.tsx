@@ -56,7 +56,7 @@ export function FeeAssignmentsClient() {
     else toast?.error?.(data?.error ?? 'Lỗi');
   };
 
-  const filteredClasses = filterCampus !== 'all' && assignForm.campusId
+  const filteredClasses = assignForm.campusId
     ? classes.filter((c: any) => c?.campusId === assignForm.campusId)
     : classes;
 
@@ -85,10 +85,10 @@ export function FeeAssignmentsClient() {
                 </Select>
               </div>
               <div><Label>Lớp (tùy chọn)</Label>
-                <Select value={assignForm.classId} onValueChange={v => setAssignForm({ ...assignForm, classId: v })}>
+                <Select value={assignForm.classId} onValueChange={v => setAssignForm({ ...assignForm, classId: v === 'all' ? '' : v })}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả lớp" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tất cả lớp</SelectItem>
+                    <SelectItem value="all">Tất cả lớp</SelectItem>
                     {filteredClasses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
