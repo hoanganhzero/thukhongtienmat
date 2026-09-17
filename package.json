@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "prisma migrate resolve --rolled-back 20260917_add_bank_transactions || true; prisma migrate deploy && prisma db seed && next start",
+    "start": "prisma migrate resolve --rolled-back 20260917_add_bank_transactions || true; prisma migrate deploy && (prisma db seed || echo 'Seed du lieu mau that bai; website van tiep tuc khoi dong.') && next start",
     "lint": "eslint ."
   },
   "prisma": {
@@ -31,7 +31,6 @@
     "tailwindcss": "3.4.0",
     "tailwindcss-animate": "1.0.7",
     "ts-node": "10.9.2",
-    "tsx": "4.20.3",
     "typescript": "5.6.3"
   },
   "dependencies": {
@@ -113,6 +112,7 @@
     "sonner": "1.5.0",
     "swr": "2.2.4",
     "tailwind-scrollbar-hide": "1.1.7",
+    "tsx": "4.20.3",
     "vaul": "1.0.0",
     "webpack": "5.99.5",
     "xlsx": "^0.18.5",
