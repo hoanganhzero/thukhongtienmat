@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { GraduationCap, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { parseStudentRows } from '@/lib/student-import';
 
 export function StudentsClient() {
   const [students, setStudents] = useState<any[]>([]);
@@ -24,6 +27,9 @@ export function StudentsClient() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ studentCode: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '' });
   const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/campuses').then(r => r.json()).then(d => setCampuses(Array.isArray(d) ? d : []));
@@ -35,7 +41,7 @@ export function StudentsClient() {
     if (filterClass !== 'all') params.set('classId', filterClass);
     else if (filterCampus !== 'all') params.set('campusId', filterCampus);
     if (search) params.set('search', search);
-    fetch(`/api/students?${params}`).then(r => r.json()).then(d => { setStudents(d?.students ?? []); setTotal(d?.total ?? 0); });
+    fetch(`/api/students?${params}`).then(r => r.json()).then(d => { setStudents(d?.students ?? []); setTotal(d?.total ?? 0); setSelectedIds([]); });
   }, [page, filterClass, filterCampus, search]);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
@@ -50,9 +56,71 @@ export function StudentsClient() {
     const method = editing ? 'PUT' : 'POST';
     const url = editing ? `/api/students/${editing.id}` : '/api/students';
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-    if (res.ok) { toast?.success??(editing ? 'Đã cập nhật' : 'Đã thêm học sinh'); setOpen(false); setEditing(null); loadStudents(); }
+    if (res.ok) { toast.success(editing ? 'Đã cập nhật' : 'Đã thêm học sinh'); setOpen(false); setEditing(null); loadStudents(); }
     else { const err = await res.json().catch(() => ({})); toast?.error?.(err?.error ?? 'Lỗi'); }
   };
+
+  const handleImport = async (file?: File) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const parsed = parseStudentRows(rows, allClasses);
+      if (parsed.errors.length) {
+        toast.error(parsed.errors.slice(0, 5).join('\n'));
+        return;
+      }
+      const res = await fetch('/api/students/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students: parsed.students }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập danh sách');
+      toast.success(`Đã nhập/cập nhật ${data.imported} học sinh`);
+      loadStudents();
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Tệp Excel không hợp lệ');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const downloadTemplate = () => {
+    const sheet = XLSX.utils.json_to_sheet([{
+      'Mã HS': 'HS001',
+      'Họ tên': 'Nguyễn Văn A',
+      'Lớp': allClasses[0]?.name ?? 'Tên lớp',
+      'Ngày sinh': '2010-01-15',
+      'SĐT': '0901234567',
+      'SĐT phụ huynh': '0909876543',
+      Zalo: '0909876543',
+    }]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Danh sách học sinh');
+    XLSX.writeFile(workbook, 'mau-danh-sach-hoc-sinh.xlsx');
+  };
+
+  const deleteSelected = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Xóa ${selectedIds.length} học sinh đã chọn? Các khoản thu, biên lai và thông báo liên quan cũng sẽ bị xóa.`)) return;
+    const res = await fetch('/api/students/bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa học sinh');
+    toast.success(`Đã xóa ${data.deleted} học sinh`);
+    setSelectedIds([]);
+    loadStudents();
+  };
+
+  const currentIds = students.map((student) => student.id);
+  const allCurrentSelected = currentIds.length > 0 && currentIds.every((id) => selectedIds.includes(id));
 
   return (
     <div className="p-6 max-w-[1200px] space-y-6">
@@ -61,7 +129,12 @@ export function StudentsClient() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Quản lý Học sinh</h1>
           <p className="text-sm text-muted-foreground">Tổng cộng {total} học sinh</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '' }); } }}>
+        <div className="flex flex-wrap gap-2">
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
+          <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải tệp mẫu</Button>
+          <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}</Button>
+          {selectedIds.length > 0 && <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>}
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm học sinh</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? 'Sửa học sinh' : 'Thêm học sinh'}</DialogTitle></DialogHeader>
@@ -80,7 +153,8 @@ export function StudentsClient() {
               <Button onClick={handleSave} className="w-full">Lưu</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -103,6 +177,7 @@ export function StudentsClient() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"><Checkbox aria-label="Chọn tất cả học sinh trên trang" checked={allCurrentSelected} onCheckedChange={(checked) => setSelectedIds(checked ? [...new Set([...selectedIds, ...currentIds])] : selectedIds.filter((id) => !currentIds.includes(id)))} /></TableHead>
                 <TableHead>Mã HS</TableHead>
                 <TableHead>Họ tên</TableHead>
                 <TableHead>Lớp</TableHead>
@@ -114,6 +189,7 @@ export function StudentsClient() {
             <TableBody>
               {students.map((s: any) => (
                 <TableRow key={s?.id}>
+                  <TableCell><Checkbox aria-label={`Chọn ${s?.fullName}`} checked={selectedIds.includes(s.id)} onCheckedChange={(checked) => setSelectedIds(checked ? [...selectedIds, s.id] : selectedIds.filter((id) => id !== s.id))} /></TableCell>
                   <TableCell className="font-mono text-sm">{s?.studentCode}</TableCell>
                   <TableCell className="font-medium">{s?.fullName}</TableCell>
                   <TableCell>{s?.class?.name}</TableCell>
