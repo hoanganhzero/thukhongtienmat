@@ -66,21 +66,21 @@ export function NotificationsClient() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><Label>Cơ sở</Label>
-              <Select value={form.campusId} onValueChange={v => setForm({ ...form, campusId: v, classId: '' })}>
+              <Select value={form.campusId} onValueChange={v => setForm({ ...form, campusId: v === 'all' ? '' : v, classId: '' })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
-                <SelectContent><SelectItem value="">Tất cả</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="all">Tất cả</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Lớp</Label>
-              <Select value={form.classId} onValueChange={v => setForm({ ...form, classId: v })}>
+              <Select value={form.classId} onValueChange={v => setForm({ ...form, classId: v === 'all' ? '' : v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
-                <SelectContent><SelectItem value="">Tất cả</SelectItem>{filteredClasses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="all">Tất cả</SelectItem>{filteredClasses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Khoản thu</Label>
-              <Select value={form.feeTypeId} onValueChange={v => setForm({ ...form, feeTypeId: v })}>
+              <Select value={form.feeTypeId} onValueChange={v => setForm({ ...form, feeTypeId: v === 'all' ? '' : v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
-                <SelectContent><SelectItem value="">Tất cả</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
+                <SelectContent><SelectItem value="all">Tất cả</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Kênh gửi</Label>
