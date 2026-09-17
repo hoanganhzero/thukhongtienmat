@@ -4,17 +4,6 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Hidden test account
-  await prisma.user.upsert({
-    where: { email: 'abacus-72149f88@example.com' },
-    update: {},
-    create: {
-      email: 'abacus-72149f88@example.com',
-      password: await bcrypt.hash('w#Tjmkk5dl', 10),
-      name: 'Test Admin',
-    },
-  });
-
   // Admin account: admin/admin123
   const adminHash = await bcrypt.hash('admin123', 10);
   await prisma.admin.upsert({
@@ -88,3 +77,70 @@ async function main() {
   const classes: any[] = [];
   for (let ci = 0; ci < campuses.length; ci++) {
     const numClasses = classesPerCampus[ci] ?? 2;
+    for (let j = 0; j < numClasses; j++) {
+      const cname = classNames[classIdx] ?? `Lớp${classIdx}`;
+      const cls = await prisma.class.upsert({
+        where: { id: `class-${cname.toLowerCase()}` },
+        update: { name: cname, campusId: campuses[ci].id, schoolYear: '2025-2026' },
+        create: { id: `class-${cname.toLowerCase()}`, name: cname, campusId: campuses[ci].id, schoolYear: '2025-2026', teacherName: `GV. Nguyễn Văn ${String.fromCharCode(65 + classIdx)}` },
+      });
+      classes.push(cls);
+      classIdx++;
+    }
+  }
+
+  // Students: 4 per class
+  const lastNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Võ', 'Phan', 'Đỗ', 'Huỳnh', 'Bùi'];
+  const firstNames = ['An', 'Bình', 'Chi', 'Dũng', 'Em', 'Phúc', 'Giang', 'Hưng', 'Khoa', 'Linh',
+    'Minh', 'Nam', 'Oanh', 'Phước', 'Quân', 'Sang', 'Tâm', 'Uýt', 'Vân', 'Xuân',
+    'Yến', 'Bảo', 'Cường', 'Dương', 'Hải', 'Kiên', 'Lâm', 'Ngọc', 'Trúc', 'Tùng',
+    'Việt', 'Huy', 'Thành', 'Trung', 'Tiến', 'Luân', 'Đạt', 'Thắng', 'Tuấn', 'Long'];
+  let studentCount = 0;
+
+  for (const cls of classes) {
+    for (let si = 0; si < 4; si++) {
+      studentCount++;
+      const code = `HS${String(studentCount).padStart(4, '0')}`;
+      const fullName = `${lastNames[studentCount % lastNames.length]} Văn ${firstNames[studentCount % firstNames.length]}`;
+      const hash = await bcrypt.hash(code, 10); // password = student code
+
+      await prisma.student.upsert({
+        where: { studentCode: code },
+        update: { fullName, classId: cls.id },
+        create: {
+          studentCode: code,
+          fullName,
+          classId: cls.id,
+          phone: `09${String(10000000 + studentCount)}`,
+          parentPhone: `09${String(20000000 + studentCount)}`,
+          passwordHash: hash,
+        },
+      });
+    }
+  }
+
+  // App settings
+  const defaultSettings = [
+    { key: 'school_name', value: 'Trung tâm GDNN-GDTX Khu vực Tân Ninh' },
+    { key: 'school_address', value: 'Tây Ninh' },
+    { key: 'current_academic_year', value: '2025-2026' },
+  ];
+
+  for (const s of defaultSettings) {
+    await prisma.appSetting.upsert({
+      where: { key: s.key },
+      update: { value: s.value },
+      create: s,
+    });
+  }
+
+  console.log(`Seeded: ${campuses.length} campuses, ${classes.length} classes, ${studentCount} students, ${feeTypes.length} fee types`);
+}
+
+main()
+  .then(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error(e);
+    prisma.$disconnect();
+    process.exit(1);
+  });
