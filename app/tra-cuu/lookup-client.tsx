@@ -8,6 +8,7 @@ import { QrDisplay } from '@/components/qr-display';
 import { StatusBadge } from '@/components/status-badge';
 import { FileUpload } from '@/components/file-upload';
 import { formatCurrency, buildVietQrUrl } from '@/lib/utils';
+import { groupPendingFees } from '@/lib/payment-qr';
 import { Search, ArrowLeft, GraduationCap, Upload as UploadIcon } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -54,6 +55,10 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
     doSearch(query);
   };
 
+  const paymentGroups = student ? groupPendingFees((student.feeAssignments ?? [])
+    .filter((fee: any) => fee.status === 'pending')
+    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name } } }))) : [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
@@ -96,7 +101,9 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
             {(student?.feeAssignments?.length ?? 0) === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">Chưa có khoản thu nào được gán</CardContent></Card>
             ) : (
-              (student.feeAssignments ?? []).map((fa: any) => (
+              <>
+              {paymentGroups.map((group) => <QrDisplay key={`${group.studentId}-${group.accountNo}`} accountNo={group.accountNo} amount={group.amount} description={group.description} accountName={group.accountName} bankName={group.bankName} />)}
+              {(student.feeAssignments ?? []).map((fa: any) => (
                 <Card key={fa?.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-5 space-y-4">
                     <div className="flex justify-between items-start">
@@ -112,12 +119,6 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
 
                     {fa?.status === 'pending' && fa?.feeType?.bankAccountNumber && (
                       <>
-                        <QrDisplay
-                          accountNo={fa.feeType.bankAccountNumber}
-                          amount={fa.amount}
-                          description={fa.qrContent ?? ''}
-                          accountName={fa.feeType.bankAccountName ?? ''}
-                        />
                         {uploadingFor === fa.id ? (
                           <FileUpload lookupToken={lookupToken} onUploadComplete={(data) => handleUpload(fa.id, data)} />
                         ) : (
@@ -154,7 +155,8 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
                     )}
                   </CardContent>
                 </Card>
-              ))
+              ))}
+              </>
             )}
           </div>
         )}
