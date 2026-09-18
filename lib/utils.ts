@@ -9,8 +9,10 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
 
-export function generateQrContent(feeTypeName: string, studentCode: string): string {
-  return `TN26 ${studentCode} ${feeTypeName}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0111/g, 'd').replace(/\u0110/g, 'D').toUpperCase();
+export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string): string {
+  return fullName && className
+    ? `${fullName} - Lớp ${className} - Thanh toán tiền ${feeTypeName} - ${studentCode}`
+    : `TN26 ${studentCode} ${feeTypeName}`;
 }
 
 export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string): string {
