@@ -6,7 +6,7 @@ type Assignment = {
 };
 
 export function summarizeAssignments(assignments: Assignment[]) {
-  const statuses = { pending: 0, uploaded: 0, confirmed: 0, rejected: 0 };
+  const statuses = { pending: 0, uploaded: 0, confirmed: 0, rejected: 0, exempt: 0 };
   const campuses = new Map<string, any>();
   const classes = new Map<string, any>();
   const feeTypes = new Map<string, any>();
@@ -23,14 +23,16 @@ export function summarizeAssignments(assignments: Assignment[]) {
       [feeTypes, item.feeType.id, item.feeType.name],
     ] as const;
     for (const [map, id, name] of dimensions) {
-      const row = map.get(id) ?? { id, name, total: 0, confirmed: 0, pending: 0, totalAmount: 0, confirmedAmount: 0 };
+      const row = map.get(id) ?? { id, name, total: 0, confirmed: 0, pending: 0, exempt: 0, totalAmount: 0, confirmedAmount: 0 };
       row.total++;
       row.totalAmount += item.amount;
-      if (item.status === 'confirmed') { row.confirmed++; row.confirmedAmount += item.amount; } else row.pending++;
+      if (item.status === 'confirmed') { row.confirmed++; row.confirmedAmount += item.amount; }
+      else if (item.status === 'exempt') row.exempt++;
+      else row.pending++;
       map.set(id, row);
     }
   }
 
-  const finish = (values: any[]) => values.map((row) => ({ ...row, rate: row.total ? Math.round(row.confirmed * 100 / row.total) : 0 }));
+  const finish = (values: any[]) => values.map((row) => ({ ...row, rate: row.total ? Math.round((row.confirmed + row.exempt) * 100 / row.total) : 0 }));
   return { statuses, totalAmount, confirmedAmount, campusStats: finish([...campuses.values()]), classStats: finish([...classes.values()]), feeTypeStats: finish([...feeTypes.values()]) };
 }

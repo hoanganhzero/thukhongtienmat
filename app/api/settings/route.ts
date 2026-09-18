@@ -22,7 +22,7 @@ export async function PUT(request: Request) {
   try {
     const session = await auth();
     if (!session?.user) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
-    if (((session.user as any).adminRole) === 'accountant') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
+    if (((session.user as any).adminRole) !== 'super_admin') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const data = await request.json();
     // data is { key: value, key: value }
     for (const [key, value] of Object.entries(data)) {

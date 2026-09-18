@@ -104,6 +104,8 @@ export async function POST(request: Request) {
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
           qrContent,
           status: 'pending',
+          bhytCategory: feeType.name.toUpperCase().includes('BHYT') ? 'student' : null,
+          bhytMonths: feeType.name.toUpperCase().includes('BHYT') ? 12 : null,
         },
       });
       results.push(assignment);

@@ -7,21 +7,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency } from '@/lib/utils';
-import { BarChart3, Download } from 'lucide-react';
+import { Download, ReceiptText } from 'lucide-react';
 
 export function ReportsClient() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [campuses, setCampuses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterFeeType, setFilterFeeType] = useState('all');
   const [filterCampus, setFilterCampus] = useState('all');
+  const [filterClass, setFilterClass] = useState('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
     fetch('/api/campuses').then(r => r.json()).then(d => setCampuses(Array.isArray(d) ? d : []));
+    fetch('/api/classes').then(r => r.json()).then(d => setClasses(Array.isArray(d) ? d : []));
   }, []);
 
   const load = useCallback(() => {
@@ -29,8 +32,9 @@ export function ReportsClient() {
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
+    if (filterClass !== 'all') params.set('classId', filterClass);
     fetch(`/api/fee-assignments?${params}`).then(r => r.json()).then(d => { setAssignments(d?.assignments ?? []); setTotal(d?.total ?? 0); });
-  }, [page, filterStatus, filterFeeType, filterCampus]);
+  }, [page, filterStatus, filterFeeType, filterCampus, filterClass]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -39,6 +43,7 @@ export function ReportsClient() {
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
+    if (filterClass !== 'all') params.set('classId', filterClass);
     const a = document.createElement('a');
     a.href = `/api/reports/export?${params}`;
     a.download = 'bao-cao-hoc-phi.xlsx';
@@ -65,17 +70,18 @@ export function ReportsClient() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Select value={filterCampus} onValueChange={v => { setFilterCampus(v); setPage(1); }}>
+        <Select value={filterCampus} onValueChange={v => { setFilterCampus(v); setFilterClass('all'); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả cơ sở</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
         </Select>
+        <Select value={filterClass} onValueChange={v => { setFilterClass(v); setPage(1); }}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả lớp</SelectItem>{classes.filter((item: any) => filterCampus === 'all' || item.campusId === filterCampus).map((item: any) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>
         <Select value={filterFeeType} onValueChange={v => { setFilterFeeType(v); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả khoản</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">Tất cả</SelectItem><SelectItem value="pending">Chưa đóng</SelectItem><SelectItem value="uploaded">Đã gửi ảnh</SelectItem><SelectItem value="confirmed">Đã xác nhận</SelectItem><SelectItem value="rejected">Từ chối</SelectItem></SelectContent>
+          <SelectContent><SelectItem value="all">Tất cả</SelectItem><SelectItem value="pending">Chưa đóng</SelectItem><SelectItem value="uploaded">Đã gửi ảnh</SelectItem><SelectItem value="confirmed">Đã xác nhận</SelectItem><SelectItem value="exempt">Không phải đóng</SelectItem><SelectItem value="rejected">Từ chối</SelectItem></SelectContent>
         </Select>
       </div>
 
@@ -91,6 +97,7 @@ export function ReportsClient() {
                 <TableHead>Khoản thu</TableHead>
                 <TableHead>Số tiền</TableHead>
                 <TableHead>Trạng thái</TableHead>
+                <TableHead>Chứng từ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,6 +110,7 @@ export function ReportsClient() {
                   <TableCell>{a?.feeType?.name}</TableCell>
                   <TableCell className="font-mono">{formatCurrency(a?.amount ?? 0)}</TableCell>
                   <TableCell><StatusBadge status={a?.status ?? 'pending'} /></TableCell>
+                  <TableCell>{a?.status === 'confirmed' && <Button variant="outline" size="sm" onClick={() => window.open(`/api/receipts/${a.id}`, '_blank')}><ReceiptText className="mr-1 h-4 w-4" /> Xuất</Button>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

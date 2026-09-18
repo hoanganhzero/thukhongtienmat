@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     const matchedAssignments = paymentMatches[0];
     const assignment = matchedAssignments[0];
     await prisma.$transaction([
-      prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed' } }),
+      prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed', paidAt: new Date() } }),
       prisma.bankTransaction.update({
         where: { provider_providerTransactionId: { provider: 'sepay', providerTransactionId } },
         data: { matchedAssignmentId: assignment.id, status: 'matched' },

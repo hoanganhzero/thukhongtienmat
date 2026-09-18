@@ -25,6 +25,7 @@ export function getStatusLabel(status: string): string {
     uploaded: 'Đã gửi ảnh',
     confirmed: 'Đã xác nhận',
     rejected: 'Bị từ chối',
+    exempt: 'Không phải đóng',
   };
   return map[status] ?? status;
 }
@@ -35,6 +36,7 @@ export function getStatusColor(status: string): string {
     uploaded: 'bg-blue-100 text-blue-800',
     confirmed: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
+    exempt: 'bg-sky-100 text-sky-800',
   };
   return map[status] ?? 'bg-gray-100 text-gray-800';
 }

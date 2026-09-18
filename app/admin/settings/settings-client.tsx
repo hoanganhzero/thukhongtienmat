@@ -41,6 +41,8 @@ export function SettingsClient() {
         <CardContent className="space-y-4">
           <div><Label>Tên trường</Label><Input value={settings?.school_name ?? ''} onChange={e => update('school_name', e.target.value)} className="mt-1" /></div>
           <div><Label>Địa chỉ</Label><Input value={settings?.school_address ?? ''} onChange={e => update('school_address', e.target.value)} className="mt-1" /></div>
+          <div><Label>Mã số thuế/Đơn vị</Label><Input value={settings?.school_tax_code ?? ''} onChange={e => update('school_tax_code', e.target.value)} className="mt-1" /></div>
+          <div><Label>Ký hiệu chứng từ</Label><Input value={settings?.receipt_prefix ?? 'PT'} onChange={e => update('receipt_prefix', e.target.value)} className="mt-1" /></div>
           <div><Label>Năm học</Label><Input value={settings?.current_academic_year ?? ''} onChange={e => update('current_academic_year', e.target.value)} className="mt-1" /></div>
         </CardContent>
       </Card>

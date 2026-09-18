@@ -81,6 +81,10 @@ model FeeAssignment {
   dueDate       DateTime?
   qrContent     String?
   status        String         @default("pending")
+  paidAt        DateTime?
+  bhytCategory  String?
+  bhytMonths    Int?
+  bhytNote      String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   paymentProofs PaymentProof[]
@@ -89,6 +93,7 @@ model FeeAssignment {
   @@index([studentId])
   @@index([feeTypeId])
   @@index([status])
+  @@index([bhytCategory])
   @@unique([studentId, feeTypeId, academicYear])
   @@map("fee_assignments")
 }
