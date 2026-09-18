@@ -12,7 +12,7 @@ import { signOut } from 'next-auth/react';
 type Role = 'super_admin' | 'accountant' | 'treasurer' | 'teacher';
 
 const menuItems: { href: string; label: string; icon: any; roles: Role[] }[] = [
-  { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
   { href: '/admin/campuses', label: 'Cơ sở', icon: Building2, roles: ['super_admin'] },
   { href: '/admin/classes', label: 'Lớp học', icon: Users, roles: ['super_admin'] },
   { href: '/admin/students', label: 'Học sinh', icon: GraduationCap, roles: ['super_admin', 'accountant', 'treasurer'] },

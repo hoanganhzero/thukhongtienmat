@@ -1,77 +1,35 @@
 export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { summarizeAssignments } from '@/lib/dashboard-stats';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = (await auth())?.user as any;
+    if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const params = new URL(request.url).searchParams;
+    const campusId = params.get('campusId');
+    const classId = params.get('classId');
+    const feeTypeId = params.get('feeTypeId');
+    const studentWhere: any = {};
+    if (user.adminRole === 'teacher') {
+      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      studentWhere.classId = user.classId;
+    } else if (classId) studentWhere.classId = classId;
+    else if (campusId) studentWhere.class = { campusId };
 
-    const [totalStudents, totalPending, totalUploaded, totalConfirmed, totalRejected, campuses, recentUploaded] = await Promise.all([
-      prisma.student.count(),
-      prisma.feeAssignment.count({ where: { status: 'pending' } }),
-      prisma.feeAssignment.count({ where: { status: 'uploaded' } }),
-      prisma.feeAssignment.count({ where: { status: 'confirmed' } }),
-      prisma.feeAssignment.count({ where: { status: 'rejected' } }),
-      prisma.campus.findMany({
-        include: {
-          classes: {
-            include: {
-              students: {
-                include: {
-                  feeAssignments: { select: { status: true, amount: true } },
-                },
-              },
-            },
-          },
-        },
-      }),
-      prisma.feeAssignment.findMany({
-        where: { status: 'uploaded' },
-        take: 10,
-        orderBy: { updatedAt: 'desc' },
-        include: {
-          student: { include: { class: true } },
-          feeType: true,
-          paymentProofs: true,
-        },
-      }),
+    const assignmentWhere: any = { student: studentWhere };
+    if (feeTypeId) assignmentWhere.feeTypeId = feeTypeId;
+    const [assignments, totalStudents, recentUploaded] = await Promise.all([
+      prisma.feeAssignment.findMany({ where: assignmentWhere, include: { student: { include: { class: { include: { campus: true } } } }, feeType: true } }),
+      prisma.student.count({ where: studentWhere }),
+      prisma.feeAssignment.findMany({ where: { ...assignmentWhere, status: 'uploaded' }, take: 8, orderBy: { updatedAt: 'desc' }, include: { student: { include: { class: true } }, feeType: true } }),
     ]);
-
-    // Stats by campus
-    const campusStats = campuses.map((c: any) => {
-      let totalAmount = 0;
-      let confirmedAmount = 0;
-      let studentCount = 0;
-      for (const cls of c.classes ?? []) {
-        for (const s of cls.students ?? []) {
-          studentCount++;
-          for (const fa of s.feeAssignments ?? []) {
-            totalAmount += fa.amount ?? 0;
-            if (fa.status === 'confirmed') confirmedAmount += fa.amount ?? 0;
-          }
-        }
-      }
-      return { id: c.id, name: c.name, studentCount, totalAmount, confirmedAmount };
-    });
-
-    // Sums
-    const totalAmountAll = await prisma.feeAssignment.aggregate({ _sum: { amount: true } });
-    const confirmedAmountAll = await prisma.feeAssignment.aggregate({ where: { status: 'confirmed' }, _sum: { amount: true } });
-
-    return NextResponse.json({
-      totalStudents,
-      totalPending,
-      totalUploaded,
-      totalConfirmed,
-      totalRejected,
-      totalAmount: totalAmountAll._sum?.amount ?? 0,
-      confirmedAmount: confirmedAmountAll._sum?.amount ?? 0,
-      campusStats,
-      recentUploaded,
-    });
+    const summary = summarizeAssignments(assignments);
+    return NextResponse.json({ totalStudents, totalAssignments: assignments.length, ...summary, recentUploaded });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
+    return NextResponse.json({ error: error?.message ?? 'Không thể tải thống kê' }, { status: 500 });
   }
 }

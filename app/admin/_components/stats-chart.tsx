@@ -3,7 +3,7 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 interface Props {
-  campusStats: { id: string; name: string; studentCount: number; totalAmount: number; confirmedAmount: number }[];
+  campusStats: { id: string; name: string; totalAmount: number; confirmedAmount: number }[];
 }
 
 export default function StatsChart({ campusStats }: Props) {
