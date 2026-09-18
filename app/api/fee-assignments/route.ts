@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       });
       if (!student) continue;
 
-      const qrContent = generateQrContent(feeType.name, student.studentCode);
+      const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name);
 
       const assignment = await prisma.feeAssignment.upsert({
         where: {
