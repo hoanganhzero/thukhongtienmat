@@ -29,6 +29,7 @@ model Class {
   teacherName String?
   createdAt   DateTime @default(now())
   students    Student[]
+  admins      Admin[]
 
   @@index([campusId])
   @@map("classes")
@@ -163,9 +164,12 @@ model Admin {
   role         String   @default("admin")
   campusId     String?
   campus       Campus?  @relation(fields: [campusId], references: [id])
+  classId      String?
+  class        Class?    @relation(fields: [classId], references: [id])
   createdAt    DateTime @default(now())
 
   @@map("admins")
+  @@index([classId])
 }
 
 // NextAuth required tables

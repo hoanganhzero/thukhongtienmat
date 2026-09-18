@@ -13,7 +13,8 @@ import { Plus, Printer, Send } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export function FeeAssignmentsClient() {
+export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?: string; teacherClassId?: string }) {
+  const isTeacher = adminRole === 'teacher';
   const [assignments, setAssignments] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
@@ -22,6 +23,7 @@ export function FeeAssignmentsClient() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterFeeType, setFilterFeeType] = useState('all');
   const [filterCampus, setFilterCampus] = useState('all');
+  const [filterClass, setFilterClass] = useState(teacherClassId ?? 'all');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [processingQr, setProcessingQr] = useState(false);
@@ -38,8 +40,9 @@ export function FeeAssignmentsClient() {
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
+    if (filterClass !== 'all') params.set('classId', filterClass);
     fetch(`/api/fee-assignments?${params}`).then(r => r.json()).then(d => { setAssignments(d?.assignments ?? []); setTotal(d?.total ?? 0); });
-  }, [page, filterStatus, filterFeeType, filterCampus]);
+  }, [page, filterStatus, filterFeeType, filterCampus, filterClass]);
 
   useEffect(() => { loadAssignments(); }, [loadAssignments]);
 
@@ -64,6 +67,7 @@ export function FeeAssignmentsClient() {
   const qrFilters = () => ({
     ...(filterFeeType !== 'all' ? { feeTypeId: filterFeeType } : {}),
     ...(filterCampus !== 'all' ? { campusId: filterCampus } : {}),
+    ...(filterClass !== 'all' ? { classId: filterClass } : {}),
   });
 
   const printBulkQr = async () => {
@@ -111,9 +115,9 @@ export function FeeAssignmentsClient() {
           <p className="text-sm text-muted-foreground">{total} khoản thu đã gán</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Tạo/In QR hàng loạt</Button>
+          {!isTeacher && <Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Tạo/In QR hàng loạt</Button>}
           <Button variant="outline" disabled={processingQr} onClick={sendBulkQr}><Send className="h-4 w-4 mr-1" /> Gửi QR cho học sinh</Button>
-          <Dialog open={open} onOpenChange={setOpen}>
+          {!isTeacher && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Gán khoản thu</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Gán khoản thu cho học sinh</DialogTitle></DialogHeader>
@@ -144,7 +148,7 @@ export function FeeAssignmentsClient() {
               <Button onClick={handleAssign} className="w-full">Gán khoản thu</Button>
             </div>
           </DialogContent>
-          </Dialog>
+          </Dialog>}
         </div>
       </div>
 
@@ -163,10 +167,11 @@ export function FeeAssignmentsClient() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả khoản</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={filterCampus} onValueChange={v => { setFilterCampus(v); setPage(1); }}>
+        {!isTeacher && <Select value={filterCampus} onValueChange={v => { setFilterCampus(v); setFilterClass('all'); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả cơ sở</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
-        </Select>
+        </Select>}
+        {!isTeacher && <Select value={filterClass} onValueChange={v => { setFilterClass(v); setPage(1); }}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả lớp</SelectItem>{classes.filter((item: any) => filterCampus === 'all' || item.campusId === filterCampus).map((item: any) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>}
       </div>
 
       <Card>

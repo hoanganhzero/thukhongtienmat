@@ -5,5 +5,6 @@ import { NotificationsClient } from './notifications-client';
 export default async function NotificationsPage() {
   const session = await auth();
   if ((session?.user as any)?.role !== 'admin') redirect('/admin/login');
-  return <NotificationsClient />;
+  const user = session!.user as any;
+  return <NotificationsClient adminRole={user.adminRole} teacherClassId={user.classId} />;
 }

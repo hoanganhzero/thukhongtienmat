@@ -13,7 +13,10 @@ export async function GET(request: Request) {
     if (user.role === 'student' && studentId !== user.id) return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     if (user.role !== 'admin' && user.role !== 'student') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const where: any = {};
-    if (studentId) where.studentId = studentId;
+    if (user.adminRole === 'teacher') {
+      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      where.student = { classId: user.classId };
+    } else if (studentId) where.studentId = studentId;
 
     const notifications = await prisma.notification.findMany({
       where,
@@ -33,9 +36,17 @@ export async function POST(request: Request) {
     if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
 
     const data = await request.json();
+    const user = session!.user as any;
     // data: { studentIds, message, channel, type, feeAssignmentId }
     const results: any[] = [];
-    const studentIds = data.studentIds ?? [];
+    let studentIds: string[] = Array.isArray(data.studentIds) ? data.studentIds.map(String) : [];
+    if (user.adminRole === 'teacher') {
+      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      const allowed = await prisma.student.findMany({ where: { id: { in: studentIds }, classId: user.classId }, select: { id: true } });
+      studentIds = allowed.map((item) => item.id);
+      data.channel = 'website';
+    }
+    if (!studentIds.length) return NextResponse.json({ error: 'Không có học sinh phù hợp' }, { status: 400 });
 
     for (const sid of studentIds) {
       const notif = await prisma.notification.create({

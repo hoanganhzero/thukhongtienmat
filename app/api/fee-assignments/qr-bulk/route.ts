@@ -6,12 +6,15 @@ import { prisma } from '@/lib/prisma';
 import { groupPendingFees } from '@/lib/payment-qr';
 import { buildVietQrUrl } from '@/lib/utils';
 
-async function getGroups(request: Request) {
+async function getGroups(request: Request, user: any) {
   const { searchParams } = new URL(request.url);
   const where: any = { status: 'pending' };
   if (searchParams.get('feeTypeId')) where.feeTypeId = searchParams.get('feeTypeId');
-  if (searchParams.get('classId')) where.student = { classId: searchParams.get('classId') };
-  if (searchParams.get('campusId')) where.student = { class: { campusId: searchParams.get('campusId') } };
+  if (user.adminRole === 'teacher') {
+    if (!user.classId) throw new Error('Tài khoản chưa được phân công lớp');
+    where.student = { classId: user.classId };
+  } else if (searchParams.get('classId')) where.student = { classId: searchParams.get('classId') };
+  if (user.adminRole !== 'teacher' && searchParams.get('campusId')) where.student = { class: { campusId: searchParams.get('campusId') } };
 
   const assignments = await prisma.feeAssignment.findMany({
     where,
@@ -22,8 +25,9 @@ async function getGroups(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (((await auth())?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
-  const groups = await getGroups(request);
+  const user = (await auth())?.user as any;
+  if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+  const groups = await getGroups(request, user);
   return NextResponse.json(groups.map((group) => ({
     ...group,
     qrUrl: buildVietQrUrl(group.accountNo, group.amount, group.description, group.accountName),
@@ -31,11 +35,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (((await auth())?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+  const user = (await auth())?.user as any;
+  if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
   const body = await request.json();
   const url = new URL(request.url);
   for (const key of ['feeTypeId', 'classId', 'campusId']) if (body?.[key]) url.searchParams.set(key, body[key]);
-  const groups = await getGroups(new Request(url));
+  const groups = await getGroups(new Request(url), user);
   const baseUrl = process.env.NEXTAUTH_URL ?? process.env.AUTH_URL ?? new URL(request.url).origin;
 
   await prisma.notification.createMany({

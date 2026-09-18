@@ -7,7 +7,8 @@ import { generateQrContent } from '@/lib/utils';
 export async function GET(request: Request) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
     const status = searchParams.get('status');
@@ -21,8 +22,11 @@ export async function GET(request: Request) {
     if (studentId) where.studentId = studentId;
     if (status) where.status = status;
     if (feeTypeId) where.feeTypeId = feeTypeId;
-    if (classId) where.student = { classId };
-    if (campusId) where.student = { ...(where.student ?? {}), class: { campusId } };
+    if (user.adminRole === 'teacher') {
+      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      where.student = { classId: user.classId };
+    } else if (classId) where.student = { classId };
+    if (user.adminRole !== 'teacher' && campusId) where.student = { ...(where.student ?? {}), class: { campusId } };
 
     const [assignments, total] = await Promise.all([
       prisma.feeAssignment.findMany({
@@ -48,7 +52,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    if (user.adminRole === 'teacher') return NextResponse.json({ error: 'Giáo viên không có quyền tạo khoản thu' }, { status: 403 });
 
     const data = await request.json();
     // data can have: studentIds[], feeTypeId, amount (override), academicYear, dueDate

@@ -27,6 +27,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
     if (!student) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 });
+    if (user?.adminRole === 'teacher') {
+      const belongsToClass = user.classId && await prisma.student.count({ where: { id, classId: user.classId } });
+      if (!belongsToClass) return NextResponse.json({ error: 'Không có quyền xem học sinh lớp khác' }, { status: 403 });
+    }
     return NextResponse.json(student);
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
@@ -36,7 +40,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const { id } = await params;
     const data = await request.json();
     const student = await prisma.student.update({
@@ -59,7 +64,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const { id } = await params;
     await prisma.student.delete({ where: { id } });
     return NextResponse.json({ success: true });

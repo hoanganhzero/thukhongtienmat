@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bell, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function NotificationsClient() {
+export function NotificationsClient({ adminRole, teacherClassId }: { adminRole?: string; teacherClassId?: string }) {
+  const isTeacher = adminRole === 'teacher';
   const [campuses, setCampuses] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
-  const [form, setForm] = useState({ campusId: '', classId: '', feeTypeId: '', channel: 'website', message: '' });
+  const [form, setForm] = useState({ campusId: '', classId: teacherClassId ?? '', feeTypeId: '', channel: 'website', message: '' });
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -65,25 +66,25 @@ export function NotificationsClient() {
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Bell className="h-4 w-4 text-primary" /> Tạo thông báo</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><Label>Cơ sở</Label>
+            {!isTeacher && <div><Label>Cơ sở</Label>
               <Select value={form.campusId} onValueChange={v => setForm({ ...form, campusId: v === 'all' ? '' : v, classId: '' })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">Tất cả</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
               </Select>
-            </div>
-            <div><Label>Lớp</Label>
+            </div>}
+            {!isTeacher && <div><Label>Lớp</Label>
               <Select value={form.classId} onValueChange={v => setForm({ ...form, classId: v === 'all' ? '' : v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">Tất cả</SelectItem>{filteredClasses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
               </Select>
-            </div>
+            </div>}
             <div><Label>Khoản thu</Label>
               <Select value={form.feeTypeId} onValueChange={v => setForm({ ...form, feeTypeId: v === 'all' ? '' : v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Tất cả" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">Tất cả</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Kênh gửi</Label>
+            {!isTeacher && <div><Label>Kênh gửi</Label>
               <Select value={form.channel} onValueChange={v => setForm({ ...form, channel: v })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -92,7 +93,7 @@ export function NotificationsClient() {
                   <SelectItem value="sms">SMS</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div>}
           </div>
           <div><Label>Nội dung</Label>
             <Textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="Nhập nội dung thông báo nhắc nhở..." rows={4} className="mt-1" />

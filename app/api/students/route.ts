@@ -7,7 +7,8 @@ import bcrypt from 'bcryptjs';
 export async function GET(request: Request) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('classId');
     const campusId = searchParams.get('campusId');
@@ -16,8 +17,11 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') ?? '50');
 
     const where: any = {};
-    if (classId) where.classId = classId;
-    if (campusId) where.class = { campusId };
+    if (user.adminRole === 'teacher') {
+      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      where.classId = user.classId;
+    } else if (classId) where.classId = classId;
+    if (user.adminRole !== 'teacher' && campusId) where.class = { campusId };
     if (search) {
       where.OR = [
         { studentCode: { contains: search } },
@@ -46,7 +50,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await auth();
-    if ((session?.user as any)?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const user = session?.user as any;
+    if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const data = await request.json();
     const hash = await bcrypt.hash(data.studentCode, 10);
     const student = await prisma.student.create({

@@ -24,8 +24,9 @@ export function FeeTypesClient() {
     const method = editing ? 'PUT' : 'POST';
     const url = editing ? `/api/fee-types/${editing.id}` : '/api/fee-types';
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, amount: Number(form.amount) }) });
-    if (res.ok) { toast?.success?.('Đã lưu'); setOpen(false); setEditing(null); load(); }
-    else toast?.error?.('Lỗi');
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) { toast?.success?.('Đã lưu'); setOpen(false); setEditing(null); resetForm(); load(); }
+    else toast?.error?.(data?.error ?? 'Không thể lưu khoản thu');
   };
 
   const resetForm = () => setForm({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'Agribank', isActive: true });
@@ -74,7 +75,7 @@ export function FeeTypesClient() {
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => { setEditing(ft); setForm({ name: ft.name, description: ft.description ?? '', amount: ft.amount, bankAccountNumber: ft.bankAccountNumber ?? '', bankAccountName: ft.bankAccountName ?? '', bankName: ft.bankName ?? 'Agribank', isActive: ft.isActive }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Xóa khoản thu này?')) return; await fetch(`/api/fee-types/${ft.id}`, { method: 'DELETE' }); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Xóa khoản thu này?')) return; const res = await fetch(`/api/fee-types/${ft.id}`, { method: 'DELETE' }); const data = await res.json().catch(() => ({})); if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa'); toast.success('Đã xóa khoản thu'); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
             </CardContent>

@@ -9,26 +9,27 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
-type Role = 'super_admin' | 'accountant';
+type Role = 'super_admin' | 'accountant' | 'treasurer' | 'teacher';
 
 const menuItems: { href: string; label: string; icon: any; roles: Role[] }[] = [
-  { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard, roles: ['super_admin', 'accountant'] },
+  { href: '/admin', label: 'Tổng quan', icon: LayoutDashboard, roles: ['super_admin', 'accountant', 'treasurer'] },
   { href: '/admin/campuses', label: 'Cơ sở', icon: Building2, roles: ['super_admin'] },
   { href: '/admin/classes', label: 'Lớp học', icon: Users, roles: ['super_admin'] },
-  { href: '/admin/students', label: 'Học sinh', icon: GraduationCap, roles: ['super_admin', 'accountant'] },
-  { href: '/admin/fee-types', label: 'Khoản thu', icon: CreditCard, roles: ['super_admin', 'accountant'] },
-  { href: '/admin/fee-assignments', label: 'Phân công thu', icon: Receipt, roles: ['super_admin', 'accountant'] },
-  { href: '/admin/verify', label: 'Duyệt ảnh', icon: ImageIcon, roles: ['super_admin', 'accountant'] },
-  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart3, roles: ['super_admin', 'accountant'] },
-  { href: '/admin/notifications', label: 'Thông báo', icon: Bell, roles: ['super_admin', 'accountant'] },
+  { href: '/admin/students', label: 'Học sinh', icon: GraduationCap, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin/fee-types', label: 'Khoản thu', icon: CreditCard, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin/fee-assignments', label: 'Theo dõi đóng tiền', icon: Receipt, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
+  { href: '/admin/verify', label: 'Duyệt biên lai', icon: ImageIcon, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart3, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin/notifications', label: 'Gửi nhắc nhở', icon: Bell, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
+  { href: '/admin/accounts', label: 'Tài khoản', icon: Users, roles: ['super_admin'] },
   { href: '/admin/settings', label: 'Cài đặt', icon: Settings, roles: ['super_admin'] },
 ];
 
 export function AdminSidebar({ adminRole = 'super_admin', fullName }: { adminRole?: string; fullName?: string }) {
   const pathname = usePathname();
-  const role = (adminRole === 'accountant' ? 'accountant' : 'super_admin') as Role;
+  const role = (['accountant', 'treasurer', 'teacher'].includes(adminRole) ? adminRole : 'super_admin') as Role;
   const items = menuItems.filter((item) => item.roles.includes(role));
-  const isAccountant = role === 'accountant';
+  const roleLabel = role === 'teacher' ? 'Giáo viên chủ nhiệm' : role === 'treasurer' ? 'Thủ quỹ' : role === 'accountant' ? 'Kế toán' : 'Quản trị viên';
 
   return (
     <aside className="w-64 bg-card border-r border-border min-h-screen flex flex-col">
@@ -37,10 +38,10 @@ export function AdminSidebar({ adminRole = 'super_admin', fullName }: { adminRol
         <p className="text-xs text-muted-foreground">Thu không tiền mặt</p>
         <div className={cn(
           'mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-          isAccountant ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
+          role !== 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
         )}>
-          {isAccountant ? <Wallet className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
-          {isAccountant ? 'Thủ quỹ / Kế toán' : 'Quản trị viên'}
+          {role !== 'super_admin' ? <Wallet className="h-3 w-3" /> : <Settings className="h-3 w-3" />}
+          {roleLabel}
         </div>
         {fullName ? <p className="text-xs text-muted-foreground mt-1.5 truncate">{fullName}</p> : null}
       </div>
