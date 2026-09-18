@@ -7,6 +7,7 @@ import { QrDisplay } from '@/components/qr-display';
 import { StatusBadge } from '@/components/status-badge';
 import { FileUpload } from '@/components/file-upload';
 import { formatCurrency } from '@/lib/utils';
+import { groupPendingFees } from '@/lib/payment-qr';
 import { GraduationCap, Bell, LogOut, Upload as UploadIcon, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -51,6 +52,9 @@ export function StudentDashboardClient({ session }: Props) {
   const feeAssignments = student?.feeAssignments ?? [];
   const pendingCount = feeAssignments.filter((fa: any) => fa?.status === 'pending').length;
   const confirmedCount = feeAssignments.filter((fa: any) => fa?.status === 'confirmed').length;
+  const paymentGroups = student ? groupPendingFees(feeAssignments
+    .filter((fee: any) => fee.status === 'pending')
+    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name } } }))) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
@@ -108,6 +112,7 @@ export function StudentDashboardClient({ session }: Props) {
 
         {tab === 'fees' && (
           <div className="space-y-4">
+            {paymentGroups.map((group) => <QrDisplay key={`${group.studentId}-${group.accountNo}`} accountNo={group.accountNo} amount={group.amount} description={group.description} accountName={group.accountName} bankName={group.bankName} />)}
             {feeAssignments.length === 0 ? (
               <Card><CardContent className="p-8 text-center text-muted-foreground">Chưa có khoản thu</CardContent></Card>
             ) : (
@@ -127,12 +132,6 @@ export function StudentDashboardClient({ session }: Props) {
 
                     {fa?.status === 'pending' && fa?.feeType?.bankAccountNumber && (
                       <>
-                        <QrDisplay
-                          accountNo={fa.feeType.bankAccountNumber}
-                          amount={fa.amount}
-                          description={fa.qrContent ?? ''}
-                          accountName={fa.feeType.bankAccountName ?? ''}
-                        />
                         {uploadingFor === fa.id ? (
                           <FileUpload onUploadComplete={(data) => handleUpload(fa.id, data)} />
                         ) : (
