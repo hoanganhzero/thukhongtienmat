@@ -1,3 +1,5 @@
+import { paymentCode } from './bank-matching';
+
 export type PendingFee = {
   id: string;
   studentId: string;
@@ -7,7 +9,7 @@ export type PendingFee = {
 };
 
 export function paymentDescription(student: PendingFee['student'], feeNames: string[]) {
-  return `${student.fullName} - Lớp ${student.class.name} - Thanh toán tiền ${feeNames.join(', ')} - ${student.studentCode}`;
+  return `${paymentCode(student.studentCode)} - ${student.fullName} - Lớp ${student.class.name} - Thanh toán tiền ${feeNames.join(', ')}`;
 }
 
 export function groupPendingFees(assignments: PendingFee[]) {

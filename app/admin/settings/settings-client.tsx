@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Settings, Save, MessageSquare, Smartphone } from 'lucide-react';
+import { Settings, Save, MessageSquare, Smartphone, Landmark, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function SettingsClient() {
@@ -44,6 +44,18 @@ export function SettingsClient() {
           <div><Label>Mã số thuế/Đơn vị</Label><Input value={settings?.school_tax_code ?? ''} onChange={e => update('school_tax_code', e.target.value)} className="mt-1" /></div>
           <div><Label>Ký hiệu chứng từ</Label><Input value={settings?.receipt_prefix ?? 'PT'} onChange={e => update('receipt_prefix', e.target.value)} className="mt-1" /></div>
           <div><Label>Năm học</Label><Input value={settings?.current_academic_year ?? ''} onChange={e => update('current_academic_year', e.target.value)} className="mt-1" /></div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Landmark className="h-4 w-4 text-primary" /> Tự động xác nhận chuyển khoản</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className={`flex items-center gap-2 rounded-lg p-3 ${settings?._sepayConfigured === 'true' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'}`}>
+            {settings?._sepayConfigured === 'true' ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+            <b>{settings?._sepayConfigured === 'true' ? 'Railway đã có khóa xác thực SePay' : 'Chưa cấu hình SEPAY_WEBHOOK_SECRET trên Railway'}</b>
+          </div>
+          <p>URL nhận webhook: <code className="rounded bg-muted px-1.5 py-1">/api/webhooks/sepay</code></p>
+          <p className="text-muted-foreground">Trên SePay, chọn sự kiện “Có tiền vào” và phương thức HMAC-SHA256. Secret Key tại SePay phải trùng với biến <code>SEPAY_WEBHOOK_SECRET</code> trên Railway.</p>
         </CardContent>
       </Card>
 

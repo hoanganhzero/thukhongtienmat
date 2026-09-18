@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { findPaymentMatch } from '@/lib/bank-matching';
 
 type SePayPayload = {
   id?: number | string;
@@ -16,10 +17,6 @@ type SePayPayload = {
   transferAmount?: number;
   referenceCode?: string;
 };
-
-function normalize(value: string | null | undefined) {
-  return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toUpperCase().replace(/[^A-Z0-9]/g, '');
-}
 
 function isValidSignature(rawBody: string, request: Request) {
   const secret = process.env.SEPAY_WEBHOOK_SECRET;
@@ -53,9 +50,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: 'Invalid transaction' }, { status: 400 });
   }
 
+  let transaction;
   try {
-    await prisma.bankTransaction.create({
-      data: {
+    transaction = await prisma.bankTransaction.upsert({
+      where: { provider_providerTransactionId: { provider: 'sepay', providerTransactionId } },
+      update: {},
+      create: {
         provider: 'sepay',
         providerTransactionId,
         gateway: payload.gateway,
@@ -69,14 +69,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    if (error?.code === 'P2002') return NextResponse.json({ success: true });
     console.error('SePay webhook storage error:', error);
     return NextResponse.json({ success: false, message: 'Storage error' }, { status: 500 });
   }
+  if (transaction.status === 'matched') return NextResponse.json({ success: true });
 
-  const content = normalize(payload.content ?? payload.description);
-  const sepayCode = normalize(payload.code);
-  const accountDigits = normalize(accountNumber);
   const candidates = await prisma.feeAssignment.findMany({
     where: {
       status: { in: ['pending', 'uploaded'] },
@@ -84,31 +81,9 @@ export async function POST(request: Request) {
     },
     include: { student: { include: { class: true } }, feeType: true },
   });
+  const matchedAssignments = findPaymentMatch(candidates, transferAmount, payload.content ?? payload.description ?? '', payload.code);
 
-  const singleMatches = candidates.filter((assignment) => {
-    if (assignment.amount !== transferAmount) return false;
-    const qrContent = normalize(assignment.qrContent);
-    const studentCode = normalize(assignment.student.studentCode);
-    const feeName = normalize(assignment.feeType.name);
-    const exactQrMatch = qrContent.length > 0 && content.includes(qrContent);
-    const configuredCodeMatch = sepayCode.length > 0 && (qrContent.includes(sepayCode) || content.includes(sepayCode));
-    const legacyMatch = content.includes(studentCode) && (content.includes(feeName) || candidates.length === 1);
-    return normalize(assignment.feeType.bankAccountNumber) === accountDigits && (exactQrMatch || configuredCodeMatch || legacyMatch);
-  });
-
-  const groupedMatches = new Map<string, typeof candidates>();
-  for (const assignment of candidates) {
-    const studentCode = normalize(assignment.student.studentCode);
-    const feeName = normalize(assignment.feeType.name);
-    if (!content.includes(studentCode) || !content.includes(feeName)) continue;
-    groupedMatches.set(assignment.studentId, [...(groupedMatches.get(assignment.studentId) ?? []), assignment]);
-  }
-  const paymentMatches = singleMatches.length === 1
-    ? [singleMatches]
-    : [...groupedMatches.values()].filter((items) => items.reduce((sum, item) => sum + item.amount, 0) === transferAmount);
-
-  if (paymentMatches.length === 1) {
-    const matchedAssignments = paymentMatches[0];
+  if (matchedAssignments.length) {
     const assignment = matchedAssignments[0];
     await prisma.$transaction([
       prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed', paidAt: new Date() } }),
@@ -125,7 +100,7 @@ export async function POST(request: Request) {
       })) }),
     ]);
   } else {
-    console.warn(`SePay transaction ${providerTransactionId} was not auto-matched: ${paymentMatches.length} groups.`);
+    console.warn(`SePay transaction ${providerTransactionId} was not auto-matched.`);
   }
 
   return NextResponse.json({ success: true });

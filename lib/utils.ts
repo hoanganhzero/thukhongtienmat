@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { paymentCode } from './bank-matching';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,8 +12,8 @@ export function formatCurrency(amount: number): string {
 
 export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string): string {
   return fullName && className
-    ? `${fullName} - Lớp ${className} - Thanh toán tiền ${feeTypeName} - ${studentCode}`
-    : `TN26 ${studentCode} ${feeTypeName}`;
+    ? `${paymentCode(studentCode)} - ${fullName} - Lớp ${className} - Thanh toán tiền ${feeTypeName}`
+    : `${paymentCode(studentCode)} ${feeTypeName}`;
 }
 
 export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string): string {

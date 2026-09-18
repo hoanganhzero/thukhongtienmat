@@ -12,6 +12,7 @@ export async function GET() {
     for (const s of settings) {
       map[s.key] = s.value;
     }
+    map._sepayConfigured = process.env.SEPAY_WEBHOOK_SECRET ? 'true' : 'false';
     return NextResponse.json(map);
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
@@ -26,6 +27,7 @@ export async function PUT(request: Request) {
     const data = await request.json();
     // data is { key: value, key: value }
     for (const [key, value] of Object.entries(data)) {
+      if (key.startsWith('_')) continue;
       await prisma.appSetting.upsert({
         where: { key },
         update: { value: String(value) },
