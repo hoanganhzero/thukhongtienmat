@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { generateQrContent } from '@/lib/utils';
+import { isSpecialBhytCategory } from '@/lib/bhyt';
 
 export async function GET(request: Request) {
   try {
@@ -74,8 +75,10 @@ export async function POST(request: Request) {
 
     if (studentIds.length === 0) return NextResponse.json({ error: 'Không có học sinh nào' }, { status: 400 });
 
-    const amount = data.amount ?? feeType.amount;
+    const amount = data.amount === undefined || data.amount === '' ? feeType.amount : Number(data.amount);
+    if (!Number.isFinite(amount) || amount < 0) return NextResponse.json({ error: 'Số tiền khoản thu không hợp lệ' }, { status: 400 });
     const academicYear = data.academicYear ?? '2025-2026';
+    const isBhyt = feeType.name.toUpperCase().includes('BHYT');
 
     const results: any[] = [];
     for (const sid of studentIds) {
@@ -87,16 +90,25 @@ export async function POST(request: Request) {
 
       const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name);
 
-      const assignment = await prisma.feeAssignment.upsert({
-        where: {
-          studentId_feeTypeId_academicYear: {
-            studentId: sid,
-            feeTypeId: data.feeTypeId,
-            academicYear,
-          },
+      const unique = { studentId: sid, feeTypeId: data.feeTypeId, academicYear };
+      const existing = await prisma.feeAssignment.findUnique({ where: { studentId_feeTypeId_academicYear: unique } });
+      const assignment = existing ? await prisma.feeAssignment.update({
+        where: { id: existing.id },
+        data: {
+          ...(!isBhyt || !isSpecialBhytCategory(existing.bhytCategory) ? {
+            amount,
+            ...(isBhyt ? {
+              bhytCategory: 'student',
+              bhytMonths: 12,
+              bhytNote: null,
+              ...(existing.status === 'exempt' ? { status: 'pending', paidAt: null } : {}),
+            } : {}),
+          } : {}),
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          qrContent,
         },
-        update: { amount, dueDate: data.dueDate ? new Date(data.dueDate) : null, qrContent },
-        create: {
+      }) : await prisma.feeAssignment.create({
+        data: {
           studentId: sid,
           feeTypeId: data.feeTypeId,
           amount,
@@ -104,8 +116,8 @@ export async function POST(request: Request) {
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
           qrContent,
           status: 'pending',
-          bhytCategory: feeType.name.toUpperCase().includes('BHYT') ? 'student' : null,
-          bhytMonths: feeType.name.toUpperCase().includes('BHYT') ? 12 : null,
+          bhytCategory: isBhyt ? 'student' : null,
+          bhytMonths: isBhyt ? 12 : null,
         },
       });
       results.push(assignment);

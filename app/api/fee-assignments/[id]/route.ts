@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { bhytCategories } from '@/lib/bhyt';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,6 +33,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (user.adminRole === 'teacher') return NextResponse.json({ error: 'Giáo viên không có quyền chỉnh sửa khoản thu' }, { status: 403 });
     const { id } = await params;
     const data = await request.json();
+    const current = await prisma.feeAssignment.findUnique({ where: { id }, include: { feeType: true } });
+    if (!current) return NextResponse.json({ error: 'Không tìm thấy khoản thu đã gán' }, { status: 404 });
 
     const updateData: any = {};
     if (data.status) updateData.status = data.status;
@@ -41,13 +44,27 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       updateData.amount = amount;
     }
     if (data.bhytCategory !== undefined) {
-      const categories = ['student', 'household', 'poor', 'near_poor', 'commune_free', 'other'];
-      if (!categories.includes(data.bhytCategory)) return NextResponse.json({ error: 'Diện BHYT không hợp lệ' }, { status: 400 });
+      if (!bhytCategories.includes(data.bhytCategory)) return NextResponse.json({ error: 'Diện BHYT không hợp lệ' }, { status: 400 });
       updateData.bhytCategory = data.bhytCategory;
-      updateData.bhytMonths = data.bhytCategory === 'student' ? Math.min(12, Math.max(1, Number(data.bhytMonths) || 12)) : null;
       updateData.bhytNote = String(data.bhytNote ?? '').trim() || null;
-      if (data.bhytCategory !== 'student') { updateData.status = 'exempt'; updateData.amount = 0; }
-      else if (data.status === undefined) updateData.status = 'pending';
+      if (data.bhytCategory === 'student') {
+        updateData.amount = current.feeType.amount;
+        updateData.bhytMonths = 12;
+        updateData.bhytNote = null;
+        if (data.status === undefined) updateData.status = 'pending';
+      } else if (data.bhytCategory === 'student_custom') {
+        const months = Number(data.bhytMonths);
+        const amount = Number(data.amount);
+        if (!Number.isInteger(months) || months < 1 || months > 12) return NextResponse.json({ error: 'Số tháng BHYT phải từ 1 đến 12' }, { status: 400 });
+        if (!Number.isFinite(amount) || amount < 0) return NextResponse.json({ error: 'Số tiền BHYT không hợp lệ' }, { status: 400 });
+        updateData.bhytMonths = months;
+        updateData.amount = amount;
+        if (data.status === undefined) updateData.status = 'pending';
+      } else {
+        updateData.bhytMonths = null;
+        updateData.status = 'exempt';
+        updateData.amount = 0;
+      }
     }
     if (updateData.status === 'confirmed') updateData.paidAt = new Date();
     if (updateData.status && updateData.status !== 'confirmed') updateData.paidAt = null;

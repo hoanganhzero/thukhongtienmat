@@ -110,7 +110,12 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   };
 
   const saveBhyt = async () => {
-    const res = await fetch(`/api/fee-assignments/${bhytEditing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...bhytForm, bhytMonths: Number(bhytForm.bhytMonths), amount: Number(bhytForm.amount) }) });
+    const payload: any = { bhytCategory: bhytForm.bhytCategory, bhytNote: bhytForm.bhytNote };
+    if (bhytForm.bhytCategory === 'student_custom') {
+      payload.bhytMonths = Number(bhytForm.bhytMonths);
+      payload.amount = Number(bhytForm.amount);
+    }
+    const res = await fetch(`/api/fee-assignments/${bhytEditing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return toast.error(data?.error ?? 'Không thể lưu cấu hình BHYT');
     toast.success('Đã cập nhật diện tham gia BHYT'); setBhytEditing(null); loadAssignments();
@@ -132,7 +137,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
             <DialogHeader><DialogTitle>Gán khoản thu cho học sinh</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div><Label>Khoản thu</Label>
-                <Select value={assignForm.feeTypeId} onValueChange={v => { setAssignForm({ ...assignForm, feeTypeId: v }); const ft = feeTypes.find((f: any) => f?.id === v); if (ft && !assignForm.amount) setAssignForm(prev => ({ ...prev, feeTypeId: v, amount: String(ft.amount) })); }}>
+                <Select value={assignForm.feeTypeId} onValueChange={v => setAssignForm({ ...assignForm, feeTypeId: v, amount: '' })}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Chọn khoản thu" /></SelectTrigger>
                   <SelectContent>{feeTypes.filter((f: any) => f?.isActive).map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name} - {formatCurrency(f?.amount ?? 0)}</SelectItem>)}</SelectContent>
                 </Select>
@@ -152,7 +157,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Số tiền (ghi đè)</Label><Input type="number" value={assignForm.amount} onChange={e => setAssignForm({ ...assignForm, amount: e.target.value })} className="mt-1" /></div>
+              <div><Label>Số tiền áp dụng</Label><Input type="number" min="0" value={assignForm.amount} onChange={e => setAssignForm({ ...assignForm, amount: e.target.value })} className="mt-1" placeholder="Để trống để dùng mức mặc định của khoản thu" /><p className="mt-1 text-xs text-muted-foreground">Hệ thống tự áp mức đã cấu hình cho toàn bộ học sinh trong lớp hoặc cơ sở.</p></div>
               <div><Label>Hạn đóng</Label><Input type="date" value={assignForm.dueDate} onChange={e => setAssignForm({ ...assignForm, dueDate: e.target.value })} className="mt-1" /></div>
               <Button onClick={handleAssign} className="w-full">Gán khoản thu</Button>
             </div>
@@ -206,7 +211,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
                   <TableCell>{a?.feeType?.name}</TableCell>
                   <TableCell className="font-mono">{formatCurrency(a?.amount ?? 0)}</TableCell>
                   <TableCell><StatusBadge status={a?.status ?? 'pending'} /></TableCell>
-                  <TableCell>{!isTeacher && a?.feeType?.name?.toUpperCase().includes('BHYT') && <Button variant="ghost" size="sm" onClick={() => { setBhytEditing(a); setBhytForm({ bhytCategory: a.bhytCategory ?? 'student', bhytMonths: String(a.bhytMonths ?? 12), bhytNote: a.bhytNote ?? '', amount: String(a.amount ?? 0) }); }}><Settings2 className="mr-1 h-4 w-4" /> BHYT</Button>}</TableCell>
+                  <TableCell>{!isTeacher && a?.feeType?.name?.toUpperCase().includes('BHYT') && <Button variant="ghost" size="sm" onClick={() => { setBhytEditing(a); setBhytForm({ bhytCategory: a.bhytCategory ?? 'student', bhytMonths: String(a.bhytMonths ?? 12), bhytNote: a.bhytNote ?? '', amount: String(a.amount ?? 0) }); }}><Settings2 className="mr-1 h-4 w-4" /> Trường hợp đặc biệt</Button>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -215,8 +220,9 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
       </Card>
 
       <Dialog open={!!bhytEditing} onOpenChange={(value) => { if (!value) setBhytEditing(null); }}><DialogContent><DialogHeader><DialogTitle>Cấu hình BHYT – {bhytEditing?.student?.fullName}</DialogTitle></DialogHeader><div className="space-y-4">
-        <div><Label>Trường hợp tham gia</Label><Select value={bhytForm.bhytCategory} onValueChange={(value) => setBhytForm({ ...bhytForm, bhytCategory: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="student">Đóng BHYT tại trường</SelectItem><SelectItem value="household">Đã mua BHYT hộ gia đình</SelectItem><SelectItem value="near_poor">Hộ cận nghèo đã được cấp BHYT</SelectItem><SelectItem value="poor">Hộ nghèo đã được cấp BHYT</SelectItem><SelectItem value="commune_free">Thuộc xã/phường được cấp miễn phí</SelectItem><SelectItem value="other">Diện khác đã có BHYT</SelectItem></SelectContent></Select></div>
-        {bhytForm.bhytCategory === 'student' && <><div><Label>Số tháng tham gia</Label><Input type="number" min="1" max="12" className="mt-1" value={bhytForm.bhytMonths} onChange={(e) => setBhytForm({ ...bhytForm, bhytMonths: e.target.value })} /></div><div><Label>Số tiền phải đóng</Label><Input type="number" min="0" className="mt-1" value={bhytForm.amount} onChange={(e) => setBhytForm({ ...bhytForm, amount: e.target.value })} /></div></>}
+        <div><Label>Trường hợp tham gia</Label><Select value={bhytForm.bhytCategory} onValueChange={(value) => setBhytForm({ ...bhytForm, bhytCategory: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="student">Thông thường – dùng mức thu chung</SelectItem><SelectItem value="student_custom">Đóng tại trường theo số tháng riêng</SelectItem><SelectItem value="household">Đã mua BHYT hộ gia đình</SelectItem><SelectItem value="near_poor">Hộ cận nghèo đã được cấp BHYT</SelectItem><SelectItem value="poor">Hộ nghèo đã được cấp BHYT</SelectItem><SelectItem value="commune_free">Thuộc xã/phường được cấp miễn phí</SelectItem><SelectItem value="other">Diện khác đã có BHYT</SelectItem></SelectContent></Select></div>
+        {bhytForm.bhytCategory === 'student' && <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">Học sinh được tự động áp đủ số tiền mặc định của khoản thu BHYT, không cần cấu hình riêng.</p>}
+        {bhytForm.bhytCategory === 'student_custom' && <><div><Label>Số tháng tham gia</Label><Input type="number" min="1" max="12" className="mt-1" value={bhytForm.bhytMonths} onChange={(e) => setBhytForm({ ...bhytForm, bhytMonths: e.target.value })} /></div><div><Label>Số tiền phải đóng</Label><Input type="number" min="0" className="mt-1" value={bhytForm.amount} onChange={(e) => setBhytForm({ ...bhytForm, amount: e.target.value })} /></div></>}
         <div><Label>Ghi chú/minh chứng</Label><Input className="mt-1" value={bhytForm.bhytNote} onChange={(e) => setBhytForm({ ...bhytForm, bhytNote: e.target.value })} placeholder="Ví dụ: Mã thẻ, thời hạn thẻ..." /></div>
         <Button className="w-full" onClick={saveBhyt}>Lưu cấu hình BHYT</Button>
       </div></DialogContent></Dialog>
