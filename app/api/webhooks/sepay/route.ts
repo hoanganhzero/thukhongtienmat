@@ -79,14 +79,14 @@ export async function POST(request: Request) {
   const accountDigits = normalize(accountNumber);
   const candidates = await prisma.feeAssignment.findMany({
     where: {
-      amount: transferAmount,
       status: { in: ['pending', 'uploaded'] },
       feeType: { bankAccountNumber: accountNumber },
     },
-    include: { student: true, feeType: true },
+    include: { student: { include: { class: true } }, feeType: true },
   });
 
-  const matches = candidates.filter((assignment) => {
+  const singleMatches = candidates.filter((assignment) => {
+    if (assignment.amount !== transferAmount) return false;
     const qrContent = normalize(assignment.qrContent);
     const studentCode = normalize(assignment.student.studentCode);
     const feeName = normalize(assignment.feeType.name);
@@ -96,26 +96,36 @@ export async function POST(request: Request) {
     return normalize(assignment.feeType.bankAccountNumber) === accountDigits && (exactQrMatch || configuredCodeMatch || legacyMatch);
   });
 
-  if (matches.length === 1) {
-    const assignment = matches[0];
+  const groupedMatches = new Map<string, typeof candidates>();
+  for (const assignment of candidates) {
+    const studentCode = normalize(assignment.student.studentCode);
+    const feeName = normalize(assignment.feeType.name);
+    if (!content.includes(studentCode) || !content.includes(feeName)) continue;
+    groupedMatches.set(assignment.studentId, [...(groupedMatches.get(assignment.studentId) ?? []), assignment]);
+  }
+  const paymentMatches = singleMatches.length === 1
+    ? [singleMatches]
+    : [...groupedMatches.values()].filter((items) => items.reduce((sum, item) => sum + item.amount, 0) === transferAmount);
+
+  if (paymentMatches.length === 1) {
+    const matchedAssignments = paymentMatches[0];
+    const assignment = matchedAssignments[0];
     await prisma.$transaction([
-      prisma.feeAssignment.update({ where: { id: assignment.id }, data: { status: 'confirmed' } }),
+      prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed' } }),
       prisma.bankTransaction.update({
         where: { provider_providerTransactionId: { provider: 'sepay', providerTransactionId } },
         data: { matchedAssignmentId: assignment.id, status: 'matched' },
       }),
-      prisma.notification.create({
-        data: {
-          studentId: assignment.studentId,
-          feeAssignmentId: assignment.id,
-          type: 'success',
-          channel: 'website',
-          message: `Khoản thu ${assignment.feeType.name} đã được tự động xác nhận thanh toán thành công.`,
-        },
-      }),
+      prisma.notification.createMany({ data: matchedAssignments.map((item) => ({
+        studentId: item.studentId,
+        feeAssignmentId: item.id,
+        type: 'success',
+        channel: 'website',
+        message: `Khoản thu ${item.feeType.name} đã được tự động xác nhận thanh toán thành công.`,
+      })) }),
     ]);
   } else {
-    console.warn(`SePay transaction ${providerTransactionId} was not auto-matched: ${matches.length} candidates.`);
+    console.warn(`SePay transaction ${providerTransactionId} was not auto-matched: ${paymentMatches.length} groups.`);
   }
 
   return NextResponse.json({ success: true });
