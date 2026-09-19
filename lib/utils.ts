@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { paymentCode } from './bank-matching';
+import { getVietQrBankBin } from './vietqr-banks';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,8 +17,8 @@ export function generateQrContent(feeTypeName: string, studentCode: string, full
     : `${paymentCode(studentCode)} ${feeTypeName}`;
 }
 
-export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string): string {
-  return `https://img.vietqr.io/image/agribank-${accountNo}-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
+export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string, bankName?: string): string {
+  return `https://img.vietqr.io/image/${getVietQrBankBin(bankName)}-${accountNo}-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 }
 
 export function getStatusLabel(status: string): string {

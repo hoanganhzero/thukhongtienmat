@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CreditCard, Plus, Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { vietQrBanks } from '@/lib/vietqr-banks';
 
 export function FeeTypesClient() {
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
@@ -46,7 +47,8 @@ export function FeeTypesClient() {
               <div><Label>Tên khoản thu</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="mt-1" /></div>
               <div><Label>Mô tả</Label><Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="mt-1" /></div>
               <div><Label>Số tiền mặc định (đồng)</Label><Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="mt-1" /></div>
-              <div><Label>Số tài khoản ngân hàng</Label><Input value={form.bankAccountNumber} onChange={e => setForm({ ...form, bankAccountNumber: e.target.value })} className="mt-1" /></div>
+              <div><Label>Ngân hàng</Label><select value={form.bankName} onChange={e => setForm({ ...form, bankName: e.target.value })} className="mt-1 flex h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"><option value="">Chọn ngân hàng</option>{vietQrBanks.map(([name]) => <option key={name} value={name}>{name}</option>)}</select></div>
+              <div><Label>Số tài khoản ngân hàng</Label><Input inputMode="numeric" value={form.bankAccountNumber} onChange={e => setForm({ ...form, bankAccountNumber: e.target.value.replace(/\D/g, '') })} className="mt-1" /></div>
               <div><Label>Tên chủ tài khoản</Label><Input value={form.bankAccountName} onChange={e => setForm({ ...form, bankAccountName: e.target.value })} className="mt-1" /></div>
               <div className="flex items-center gap-2">
                 <Switch checked={form.isActive} onCheckedChange={v => setForm({ ...form, isActive: v })} />

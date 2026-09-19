@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   const groups = await getGroups(request, user);
   return NextResponse.json(groups.map((group) => ({
     ...group,
-    qrUrl: buildVietQrUrl(group.accountNo, group.amount, group.description, group.accountName),
+    qrUrl: buildVietQrUrl(group.accountNo, group.amount, group.description, group.accountName, group.bankName),
   })));
 }
 

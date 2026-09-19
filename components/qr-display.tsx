@@ -14,7 +14,7 @@ interface QrDisplayProps {
 }
 
 export function QrDisplay({ accountNo, amount, description, accountName, bankName = 'Agribank' }: QrDisplayProps) {
-  const qrUrl = buildVietQrUrl(accountNo, amount, description, accountName);
+  const qrUrl = buildVietQrUrl(accountNo, amount, description, accountName, bankName);
 
   const handleCopy = (text: string, label: string) => {
     navigator?.clipboard?.writeText?.(text);
