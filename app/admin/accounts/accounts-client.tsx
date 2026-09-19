@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { Download, Pencil, Plus, Trash2, Upload, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 const emptyForm = { username: '', password: '', fullName: '', role: 'teacher', campusId: '', classId: '' };
@@ -20,6 +22,8 @@ export function AccountsClient() {
   const [editing, setEditing] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const bulkInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
   const load = () => fetch('/api/accounts').then((r) => r.json()).then((data) => setAccounts(Array.isArray(data) ? data : []));
 
   useEffect(() => {
@@ -36,9 +40,87 @@ export function AccountsClient() {
     setOpen(false); setEditing(null); setForm(emptyForm); load();
   };
 
+  const downloadBulkTemplate = () => {
+    const firstCampus = campuses[0];
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet([
+      {
+        'Tên lớp': '10C1',
+        'Cơ sở': firstCampus?.name ?? 'Tên cơ sở đúng trong hệ thống',
+        'Năm học': '2025-2026',
+        'Họ tên GVCN': 'Nguyễn Văn A',
+        'Tên đăng nhập GVCN': 'gv.10c1',
+        'Mật khẩu GVCN': 'Matkhau123',
+      },
+    ]);
+    sheet['!cols'] = [{ wch: 16 }, { wch: 28 }, { wch: 14 }, { wch: 26 }, { wch: 24 }, { wch: 22 }];
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Lớp và GVCN');
+    const guide = XLSX.utils.aoa_to_sheet([
+      ['HƯỚNG DẪN NHẬP LỚP VÀ TÀI KHOẢN GVCN'],
+      ['Mỗi dòng tạo hoặc cập nhật 01 lớp và 01 tài khoản giáo viên chủ nhiệm.'],
+      ['Không đổi tên 6 cột ở sheet Lớp và GVCN.'],
+      ['Cơ sở phải ghi đúng tên cơ sở đang có trong hệ thống.'],
+      ['Tên đăng nhập phải duy nhất; mật khẩu tối thiểu 6 ký tự.'],
+      ['Nếu tên đăng nhập đã tồn tại, hệ thống cập nhật lại GVCN, lớp và mật khẩu theo dòng Excel.'],
+      ['Năm học để dạng 2025-2026 hoặc năm học đang sử dụng.'],
+    ]);
+    guide['!cols'] = [{ wch: 110 }];
+    XLSX.utils.book_append_sheet(workbook, guide, 'Hướng dẫn');
+    XLSX.writeFile(workbook, 'mau-tao-lop-va-tai-khoan-gvcn.xlsx');
+  };
+
+  const importBulk = async (file?: File) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const values = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const campusMap = new Map<string, string>();
+      campuses.forEach((campus) => {
+        campusMap.set(String(campus.id).toLowerCase(), campus.id);
+        campusMap.set(String(campus.name).trim().toLowerCase(), campus.id);
+      });
+      const rows: Array<Record<string, string>> = [];
+      for (const [index, row] of values.entries()) {
+        const value = (keys: string[]) => {
+          const key = keys.find((candidate) => Object.prototype.hasOwnProperty.call(row, candidate));
+          return String(key ? row[key] ?? '' : '').trim();
+        };
+        const campusValue = value(['Cơ sở', 'Điểm trường']);
+        const campusId = campusMap.get(campusValue.toLowerCase());
+        if (!campusId) throw new Error(`Dòng ${index + 2}: cơ sở không tồn tại hoặc đang để trống`);
+        rows.push({
+          className: value(['Tên lớp', 'Lớp']),
+          campusId,
+          schoolYear: value(['Năm học']) || '2025-2026',
+          fullName: value(['Họ tên GVCN', 'GVCN', 'Giáo viên chủ nhiệm']),
+          username: value(['Tên đăng nhập GVCN', 'Tên đăng nhập', 'Username']),
+          password: value(['Mật khẩu GVCN', 'Mật khẩu', 'Password']),
+        });
+      }
+      const res = await fetch('/api/accounts/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập hàng loạt');
+      toast.success(data?.message ?? `Đã nhập ${data?.imported ?? 0} dòng`);
+      load();
+      fetch('/api/classes').then((response) => response.json()).then((data) => setClasses(Array.isArray(data) ? data : []));
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Tệp Excel không hợp lệ');
+    } finally {
+      setImporting(false);
+      if (bulkInputRef.current) bulkInputRef.current.value = '';
+    }
+  };
+
   return <div className="p-6 max-w-[1000px] space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="font-display text-2xl font-bold">Quản lý tài khoản</h1><p className="text-sm text-muted-foreground">Phân quyền đúng công việc cho từng người dùng</p></div>
+      <div className="flex flex-wrap gap-2">
+        <input ref={bulkInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => importBulk(event.target.files?.[0])} />
+        <Button variant="outline" onClick={downloadBulkTemplate}><Download className="mr-1 h-4 w-4" /> Tải mẫu lớp + GVCN</Button>
+        <Button variant="outline" disabled={importing} onClick={() => bulkInputRef.current?.click()}><Upload className="mr-1 h-4 w-4" /> {importing ? 'Đang nhập...' : 'Nhập Excel hàng loạt'}</Button>
+      </div>
       <Dialog open={open} onOpenChange={(value) => { setOpen(value); if (!value) { setEditing(null); setForm(emptyForm); } }}>
         <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> Thêm tài khoản</Button></DialogTrigger>
         <DialogContent><DialogHeader><DialogTitle>{editing ? 'Sửa tài khoản' : 'Thêm tài khoản'}</DialogTitle></DialogHeader>
