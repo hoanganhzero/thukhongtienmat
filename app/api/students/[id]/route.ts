@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import bcrypt from 'bcryptjs';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,6 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       select: {
         id: true,
         studentCode: true,
+        cccd: true,
         fullName: true,
         phone: true,
         parentPhone: true,
@@ -44,15 +46,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const { id } = await params;
     const data = await request.json();
+    const newPassword = String(data.password ?? '').trim();
     const student = await prisma.student.update({
       where: { id },
       data: {
         fullName: data.fullName,
+        cccd: String(data.cccd ?? '').trim() || null,
         classId: data.classId,
         phone: data.phone,
         parentPhone: data.parentPhone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
         zaloPhone: data.zaloPhone,
+        ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10), passwordIsDefault: false } : {}),
       },
     });
     return NextResponse.json(student);
