@@ -14,7 +14,8 @@ import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseStudentRows } from '@/lib/student-import';
 
-export function StudentsClient() {
+export function StudentsClient({ adminRole }: { adminRole?: string }) {
+  const isTeacher = adminRole === 'teacher';
   const [students, setStudents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [campuses, setCampuses] = useState<any[]>([]);
@@ -25,7 +26,7 @@ export function StudentsClient() {
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ studentCode: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '' });
+  const [form, setForm] = useState({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' });
   const [allClasses, setAllClasses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
@@ -92,6 +93,7 @@ export function StudentsClient() {
   const downloadTemplate = () => {
     const sheet = XLSX.utils.json_to_sheet([{
       'Mã HS': 'HS001',
+      CCCD: '079012345678',
       'Họ tên': 'Nguyễn Văn A',
       'Lớp': allClasses[0]?.name ?? 'Tên lớp',
       'Ngày sinh': '2010-01-15',
@@ -126,20 +128,21 @@ export function StudentsClient() {
     <div className="p-6 max-w-[1200px] space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Quản lý Học sinh</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{isTeacher ? 'Học sinh lớp chủ nhiệm' : 'Quản lý Học sinh'}</h1>
           <p className="text-sm text-muted-foreground">Tổng cộng {total} học sinh</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
+          {!isTeacher && <><input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
           <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải tệp mẫu</Button>
           <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}</Button>
           {selectedIds.length > 0 && <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>}
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '' }); } }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm học sinh</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? 'Sửa học sinh' : 'Thêm học sinh'}</DialogTitle></DialogHeader>
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div><Label>Mã HS</Label><Input value={form.studentCode} onChange={e => setForm({ ...form, studentCode: e.target.value })} disabled={!!editing} className="mt-1" /></div>
+              <div><Label>CCCD</Label><Input value={form.cccd} onChange={e => setForm({ ...form, cccd: e.target.value.replace(/\D/g, '').slice(0, 12) })} inputMode="numeric" maxLength={12} placeholder="12 chữ số, nếu có" className="mt-1" /></div>
               <div><Label>Họ tên</Label><Input value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} className="mt-1" /></div>
               <div><Label>Lớp</Label>
                 <Select value={form.classId} onValueChange={v => setForm({ ...form, classId: v })}>
@@ -150,10 +153,12 @@ export function StudentsClient() {
               <div><Label>SĐT</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="mt-1" /></div>
               <div><Label>SĐT Phụ huynh</Label><Input value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} className="mt-1" /></div>
               <div><Label>Zalo</Label><Input value={form.zaloPhone} onChange={e => setForm({ ...form, zaloPhone: e.target.value })} className="mt-1" /></div>
+              <div><Label>{editing ? 'Mật khẩu mới (để trống nếu giữ nguyên)' : 'Mật khẩu (để trống dùng mã HS/CCCD)'}</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Tối thiểu 6 ký tự" className="mt-1" /></div>
               <Button onClick={handleSave} className="w-full">Lưu</Button>
             </div>
           </DialogContent>
           </Dialog>
+          </>}
         </div>
       </div>
 
@@ -177,8 +182,9 @@ export function StudentsClient() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10"><Checkbox aria-label="Chọn tất cả học sinh trên trang" checked={allCurrentSelected} onCheckedChange={(checked) => setSelectedIds(checked ? [...new Set([...selectedIds, ...currentIds])] : selectedIds.filter((id) => !currentIds.includes(id)))} /></TableHead>
+                {!isTeacher && <TableHead className="w-10"><Checkbox aria-label="Chọn tất cả học sinh trên trang" checked={allCurrentSelected} onCheckedChange={(checked) => setSelectedIds(checked ? [...new Set([...selectedIds, ...currentIds])] : selectedIds.filter((id) => !currentIds.includes(id)))} /></TableHead>}
                 <TableHead>Mã HS</TableHead>
+                <TableHead>CCCD</TableHead>
                 <TableHead>Họ tên</TableHead>
                 <TableHead>Lớp</TableHead>
                 <TableHead>Cơ sở</TableHead>
@@ -189,17 +195,20 @@ export function StudentsClient() {
             <TableBody>
               {students.map((s: any) => (
                 <TableRow key={s?.id}>
-                  <TableCell><Checkbox aria-label={`Chọn ${s?.fullName}`} checked={selectedIds.includes(s.id)} onCheckedChange={(checked) => setSelectedIds(checked ? [...selectedIds, s.id] : selectedIds.filter((id) => id !== s.id))} /></TableCell>
+                  {!isTeacher && <TableCell><Checkbox aria-label={`Chọn ${s?.fullName}`} checked={selectedIds.includes(s.id)} onCheckedChange={(checked) => setSelectedIds(checked ? [...selectedIds, s.id] : selectedIds.filter((id) => id !== s.id))} /></TableCell>}
                   <TableCell className="font-mono text-sm">{s?.studentCode}</TableCell>
+                  <TableCell className="font-mono text-sm">{s?.cccd ?? '—'}</TableCell>
                   <TableCell className="font-medium">{s?.fullName}</TableCell>
                   <TableCell>{s?.class?.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{s?.class?.campus?.name}</TableCell>
                   <TableCell className="text-sm">{s?.phone}</TableCell>
                   <TableCell>
+                    {!isTeacher &&
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, fullName: s.fullName, classId: s.classId, phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, cccd: s.cccd ?? '', fullName: s.fullName, classId: s.classId, phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '', password: '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Xóa?')) return; await fetch(`/api/students/${s.id}`, { method: 'DELETE' }); loadStudents(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
+                    }
                   </TableCell>
                 </TableRow>
               ))}
