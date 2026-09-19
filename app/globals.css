@@ -64,5 +64,46 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 639px) {
+  h1 { font-size: 1.375rem; line-height: 1.25; }
+  h2 { font-size: 1.125rem; line-height: 1.35; }
+
+  /* Các màn hình quản trị dùng p-6 trên desktop vẫn thoáng trên điện thoại. */
+  main > .p-6 {
+    padding: 1rem;
+  }
+
+  /* Nhóm bộ lọc/nút thao tác không tràn ngang khi màn hình hẹp. */
+  main .flex.items-center.justify-between,
+  main .flex.items-center.gap-3 {
+    flex-wrap: wrap;
+  }
+
+  main input, main select, main textarea {
+    max-width: 100%;
+  }
+
+  /* Bảng vẫn giữ đủ cột nhưng cuộn ngang trong khung, không làm vỡ trang. */
+  main table {
+    min-width: 620px;
+  }
+}
+
+/* Trên điện thoại và máy tính bảng, nội dung quản trị luôn chiếm toàn bộ màn hình.
+   Sidebar chỉ mở dạng lớp phủ từ nút lưới 4 ô ở góc trên. */
+@media (max-width: 1279px) {
+  .admin-main {
+    margin-left: 0 !important;
+    padding-top: 3.75rem !important;
   }
 }
