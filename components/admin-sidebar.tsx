@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
+import Image from 'next/image';
 
 type Role = 'super_admin' | 'accountant' | 'treasurer' | 'teacher';
 
@@ -58,8 +59,13 @@ export function AdminSidebar({ adminRole = 'super_admin', fullName }: { adminRol
           <X className="h-5 w-5" />
         </button>
       <div className="p-4 border-b border-border">
-        <h1 className="font-display text-lg font-bold text-primary tracking-tight">GDNN-GDTX</h1>
-        <p className="text-xs text-muted-foreground">Thu không tiền mặt</p>
+        <div className="flex items-center gap-3 pr-8">
+          <Image src="/logo-trung-tam-tan-ninh.webp" alt="Logo Trung tâm GDNN-GDTX Khu vực Tân Ninh" width={48} height={48} className="h-12 w-12 shrink-0 rounded-full object-contain" priority />
+          <div className="min-w-0">
+            <h1 className="font-display text-sm font-bold leading-tight text-primary">GDNN-GDTX Khu vực Tân Ninh</h1>
+            <p className="text-xs text-muted-foreground">Thu không tiền mặt</p>
+          </div>
+        </div>
         <div className={cn(
           'mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
           role !== 'super_admin' ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'
