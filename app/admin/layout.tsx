@@ -8,9 +8,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const adminRole = user?.adminRole;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {role === 'admin' && <AdminSidebar adminRole={adminRole} fullName={user?.name} />}
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="admin-main min-w-0 overflow-x-hidden pt-14 xl:ml-64 xl:pt-0">{children}</main>
     </div>
   );
 }
