@@ -53,16 +53,19 @@ export async function POST(request: Request) {
     const user = session?.user as any;
     if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const data = await request.json();
+    const cccd = String(data.cccd ?? '').trim() || null;
     const hash = await bcrypt.hash(data.studentCode, 10);
     const student = await prisma.student.create({
       data: {
         studentCode: data.studentCode,
+        cccd,
         fullName: data.fullName,
         classId: data.classId,
         phone: data.phone,
         parentPhone: data.parentPhone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
         passwordHash: hash,
+        passwordIsDefault: true,
         zaloPhone: data.zaloPhone,
       },
     });
