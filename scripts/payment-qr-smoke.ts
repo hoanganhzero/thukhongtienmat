@@ -8,5 +8,5 @@ const groups = groupPendingFees([
 
 assert.equal(groups.length, 1);
 assert.equal(groups[0].amount, 150000);
-assert.equal(groups[0].description, 'Trần Văn An - Lớp 12C2 - Thanh toán tiền BHYT, BHTT - HS001');
+assert.equal(groups[0].description, 'TNHS001 - Trần Văn An - Lớp 12C2 - Thanh toán tiền BHYT, BHTT');
 console.log('payment QR smoke: ok');

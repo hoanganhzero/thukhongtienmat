@@ -57,7 +57,7 @@ async function main() {
 
   // Fee types
   const feeTypes = [
-    { id: 'bhtt', name: 'BHTT', description: 'Bảo hiểm tai nạn', amount: 100000, bankAccountNumber: '3100211072899', bankAccountName: 'TT GDNN GDTX KV TAN NINH' },
+    { id: 'bhtt', name: 'BHTT', description: 'Bảo hiểm tai nạn', amount: 100000, bankAccountNumber: '5706215029631', bankAccountName: 'NGUYEN THI PHUONG THAO' },
     { id: 'bhyt', name: 'BHYT', description: 'Bảo hiểm y tế', amount: 563220, bankAccountNumber: '3100211072899', bankAccountName: 'TT GDNN GDTX KV TAN NINH' },
     { id: 'slldtt', name: 'Sổ liên lạc điện tử', description: 'Phí sử dụng sổ liên lạc điện tử', amount: 110000, bankAccountNumber: '3100211072899', bankAccountName: 'TT GDNN GDTX KV TAN NINH' },
   ];
