@@ -73,21 +73,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       id: 'student-login',
       name: 'Student',
       credentials: {
-        studentCode: { label: 'Mã học sinh', type: 'text' },
+        studentCode: { label: 'Mã học sinh hoặc CCCD', type: 'text' },
         password: { label: 'Mật khẩu', type: 'password' },
       },
       async authorize(credentials) {
-        const studentCode = credentials?.studentCode as string;
+        const loginId = String(credentials?.studentCode ?? '').trim();
         const password = credentials?.password as string;
-        if (!studentCode || !password) return null;
+        if (!loginId || !password) return null;
 
-        const student = await prisma.student.findUnique({
-          where: { studentCode },
+        const student = await prisma.student.findFirst({
+          where: { OR: [{ studentCode: loginId }, { cccd: loginId }] },
           include: { class: { include: { campus: true } } },
         });
         if (!student) return null;
 
-        const valid = await bcrypt.compare(password, student.passwordHash);
+        const valid = await bcrypt.compare(password, student.passwordHash)
+          || (student.passwordIsDefault && [student.studentCode, student.cccd].filter(Boolean).includes(password));
         if (!valid) return null;
 
         return {
