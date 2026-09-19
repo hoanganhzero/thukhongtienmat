@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { Plus, Printer, Send, Settings2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { parseDateInput } from '@/lib/date-format';
 
 export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?: string; teacherClassId?: string }) {
   const isTeacher = adminRole === 'teacher';
@@ -51,7 +52,11 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   const handleAssign = async () => {
     const body: any = { feeTypeId: assignForm.feeTypeId, academicYear: assignForm.academicYear };
     if (assignForm.amount) body.amount = Number(assignForm.amount);
-    if (assignForm.dueDate) body.dueDate = assignForm.dueDate;
+    if (assignForm.dueDate) {
+      const dueDate = parseDateInput(assignForm.dueDate);
+      if (!dueDate) { toast.error('Nhập hạn đóng hợp lệ theo dd/mm/yyyy, ví dụ 05/09/2026'); return; }
+      body.dueDate = dueDate;
+    }
     if (assignForm.classId) body.classId = assignForm.classId;
     else if (assignForm.campusId) body.campusId = assignForm.campusId;
     else { toast?.error?.('Vui lòng chọn cơ sở hoặc lớp'); return; }
@@ -158,7 +163,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
                 </Select>
               </div>
               <div><Label>Số tiền áp dụng</Label><Input type="number" min="0" value={assignForm.amount} onChange={e => setAssignForm({ ...assignForm, amount: e.target.value })} className="mt-1" placeholder="Để trống để dùng mức mặc định của khoản thu" /><p className="mt-1 text-xs text-muted-foreground">Hệ thống tự áp mức đã cấu hình cho toàn bộ học sinh trong lớp hoặc cơ sở.</p></div>
-              <div><Label>Hạn đóng</Label><Input type="date" value={assignForm.dueDate} onChange={e => setAssignForm({ ...assignForm, dueDate: e.target.value })} className="mt-1" /></div>
+              <div><Label htmlFor="due-date">Hạn đóng (dd/mm/yyyy)</Label><Input id="due-date" type="text" placeholder="dd/mm/yyyy" maxLength={10} value={assignForm.dueDate} onChange={e => setAssignForm({ ...assignForm, dueDate: e.target.value })} className="mt-1" /></div>
               <Button onClick={handleAssign} className="w-full">Gán khoản thu</Button>
             </div>
           </DialogContent>

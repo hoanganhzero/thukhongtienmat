@@ -12,8 +12,8 @@ import { useMounted } from '@/components/client-only'
  * locale/timezone after mount (safe: wrapped in suppressHydrationWarning).
  */
 
-const DEFAULT_LOCALE = 'en-US'
-const DEFAULT_TIME_ZONE = 'UTC'
+const DEFAULT_LOCALE = 'vi-VN'
+const DEFAULT_TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 type SafeDateProps = {
   date: Date | string | number
@@ -31,6 +31,7 @@ export function SafeDate({ date, options, locale = DEFAULT_LOCALE, localize = fa
   // so date+time option mixes render via toLocaleString.
   const text = (options?.timeStyle ? d.toLocaleString : d.toLocaleDateString).call(d, useLocal ? undefined : locale, {
     timeZone: useLocal ? undefined : DEFAULT_TIME_ZONE,
+    ...(!options?.dateStyle && !options?.timeStyle ? { day: '2-digit' as const, month: '2-digit' as const, year: 'numeric' as const } : {}),
     ...options,
   })
   return (

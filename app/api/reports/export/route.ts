@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { formatDate } from '@/lib/date-format';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     const detailRows = assignments.map((item) => ({
       'Mã học sinh': item.student.studentCode, 'Họ và tên': item.student.fullName, 'Lớp': item.student.class.name, 'Điểm trường/Phân hiệu': item.student.class.campus.name,
       'Khoản thu': item.feeType.name, 'Số tiền phải thu': item.amount, 'Trạng thái': statusMap[item.status] ?? item.status,
-      'Ngày thanh toán': item.paidAt ? item.paidAt.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '', 'Năm học': item.academicYear,
+      'Ngày thanh toán': formatDate(item.paidAt), 'Năm học': item.academicYear,
       'Diện BHYT': bhytMap[item.bhytCategory ?? ''] ?? '', 'Số tháng BHYT': item.bhytMonths ?? '', 'Ghi chú BHYT': item.bhytNote ?? '',
     }));
     const summarize = (key: 'class' | 'campus' | 'fee') => {

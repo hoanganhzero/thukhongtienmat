@@ -1,5 +1,6 @@
 import * as React from "react";
 import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -38,19 +39,20 @@ export function DateRangePicker({
             {value?.from ? (
               value.to ? (
                 <>
-                  {format(value.from, "LLL dd, y")} -{" "}
-                  {format(value.to, "LLL dd, y")}
+                  {format(value.from, "dd/MM/yyyy")} -{" "}
+                  {format(value.to, "dd/MM/yyyy")}
                 </>
               ) : (
-                format(value.from, "LLL dd, y")
+                format(value.from, "dd/MM/yyyy")
               )
             ) : (
-              <span>Pick a date range</span>
+              <span>Chọn khoảng ngày</span>
             )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
+            locale={vi}
             initialFocus
             mode="range"
             defaultMonth={value?.from}

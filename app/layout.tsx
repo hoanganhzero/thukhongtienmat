@@ -1,4 +1,3 @@
-import { DM_Sans, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -8,9 +7,6 @@ import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
-const dmSans = DM_Sans({ subsets: ['latin', 'latin-ext'], variable: '--font-sans' });
-const jakartaSans = Plus_Jakarta_Sans({ subsets: ['latin', 'latin-ext'], variable: '--font-display' });
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
   title: 'Thu không tiền mặt | Trung tâm GDNN-GDTX Khu vực Tân Ninh',
@@ -32,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="vi" suppressHydrationWarning>
       <head>
       </head>
-      <body className={`${dmSans.variable} ${jakartaSans.variable} ${jetbrainsMono.variable} font-sans`}>
+      <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <Providers>
             {children}
