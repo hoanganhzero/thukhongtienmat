@@ -3,9 +3,15 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { ChunkLoadErrorHandler } from '@/components/chunk-load-error-handler';
 import { Providers } from './providers';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 
 export const metadata: Metadata = {
