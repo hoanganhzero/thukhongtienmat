@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Search, LogIn, Shield, QrCode, Upload, CheckCircle } from 'lucide-react';
+import Image from 'next/image';
 
 export default function HomePage() {
   return (
@@ -8,11 +9,9 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
         <div className="max-w-[1200px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-sm">TN</span>
-            </div>
+            <Image src="/logo-trung-tam-tan-ninh.webp" alt="Logo Trung tâm GDNN-GDTX Khu vực Tân Ninh" width={48} height={48} className="h-10 w-10 rounded-full object-contain" priority />
             <div>
-              <h1 className="font-display text-sm font-bold text-primary leading-tight">GDNN-GDTX Tân Ninh</h1>
+              <h1 className="font-display text-sm font-bold text-primary leading-tight">GDNN-GDTX Khu vực Tân Ninh</h1>
               <p className="text-[10px] text-muted-foreground">Thu không tiền mặt</p>
             </div>
           </div>
