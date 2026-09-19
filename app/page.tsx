@@ -45,7 +45,7 @@ export default function HomePage() {
             <input
               name="q"
               type="text"
-              placeholder="Nhập mã học sinh hoặc số điện thoại..."
+              placeholder="Nhập mã HS, họ tên, CCCD hoặc số điện thoại..."
               className="w-full pl-12 pr-28 py-4 rounded-2xl border border-border bg-white shadow-sm text-base focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors">
@@ -59,8 +59,8 @@ export default function HomePage() {
       <section className="max-w-[1200px] mx-auto px-4 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { icon: Search, title: 'Tra cứu', desc: 'Nhập mã học sinh hoặc số điện thoại để xem các khoản cần đóng', step: '1' },
-            { icon: QrCode, title: 'Quét QR', desc: 'Sử dụng mã QR Agribank để chuyển khoản nhanh và chính xác', step: '2' },
+            { icon: Search, title: 'Tra cứu', desc: 'Nhập mã HS, họ tên, CCCD hoặc số điện thoại để xem các khoản cần đóng', step: '1' },
+            { icon: QrCode, title: 'Quét QR', desc: 'Sử dụng mã QR của ngân hàng được cấu hình để chuyển khoản nhanh và chính xác', step: '2' },
             { icon: Upload, title: 'Xác nhận', desc: 'Chụp ảnh biên lai chuyển khoản và tải lên hệ thống để xác nhận', step: '3' },
           ].map((item) => (
             <div key={item.step} className="bg-white rounded-2xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow">
