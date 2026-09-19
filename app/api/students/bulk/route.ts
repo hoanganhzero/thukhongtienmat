@@ -18,22 +18,27 @@ export async function POST(request: Request) {
 
     const classIds = new Set((await prisma.class.findMany({ select: { id: true } })).map((item) => item.id));
     const seen = new Set<string>();
+    const seenCccd = new Set<string>();
     for (const [index, row] of rows.entries()) {
       const code = String(row?.studentCode ?? '').trim();
+      const cccd = String(row?.cccd ?? '').trim();
       if (!code || !String(row?.fullName ?? '').trim() || !classIds.has(String(row?.classId ?? ''))) {
         return NextResponse.json({ error: `Dữ liệu không hợp lệ tại dòng ${index + 2}` }, { status: 400 });
       }
       if (seen.has(code)) return NextResponse.json({ error: `Trùng mã học sinh ${code} trong tệp` }, { status: 400 });
+      if (cccd && seenCccd.has(cccd)) return NextResponse.json({ error: `Trùng CCCD ${cccd} trong tệp` }, { status: 400 });
       if (row?.dateOfBirth && Number.isNaN(new Date(row.dateOfBirth).getTime())) {
         return NextResponse.json({ error: `Ngày sinh không hợp lệ tại dòng ${index + 2}` }, { status: 400 });
       }
       seen.add(code);
+      if (cccd) seenCccd.add(cccd);
     }
 
     const passwordHashes = await Promise.all(rows.map((row: any) => bcrypt.hash(String(row.studentCode).trim(), 10)));
     await prisma.$transaction(rows.map((row: any, index: number) => {
       const data = {
         fullName: String(row.fullName).trim(),
+        cccd: String(row.cccd ?? '').trim() || null,
         classId: String(row.classId),
         phone: String(row.phone ?? '').trim() || null,
         parentPhone: String(row.parentPhone ?? '').trim() || null,
@@ -42,10 +47,11 @@ export async function POST(request: Request) {
       };
       return prisma.student.upsert({
         where: { studentCode: String(row.studentCode).trim() },
-        update: data,
+        update: { ...data, passwordHash: passwordHashes[index], passwordIsDefault: true },
         create: {
           studentCode: String(row.studentCode).trim(),
           passwordHash: passwordHashes[index],
+          passwordIsDefault: true,
           ...data,
         },
       });
