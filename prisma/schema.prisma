@@ -32,12 +32,14 @@ model Class {
   admins      Admin[]
 
   @@index([campusId])
+  @@unique([name, campusId, schoolYear])
   @@map("classes")
 }
 
 model Student {
   id             String          @id @default(cuid())
   studentCode    String          @unique
+  cccd           String?         @unique
   fullName       String
   classId        String
   class          Class           @relation(fields: [classId], references: [id])
@@ -45,6 +47,7 @@ model Student {
   parentPhone    String?
   dateOfBirth    DateTime?
   passwordHash   String
+  passwordIsDefault Boolean       @default(true)
   zaloPhone      String?
   createdAt      DateTime        @default(now())
   feeAssignments FeeAssignment[]
