@@ -22,17 +22,24 @@ export async function POST(request: Request) {
       seen.add(key);
     }
 
-    const result = await prisma.$transaction(rows.map((row: any) => {
-      const name = String(row.name).trim();
-      const campusId = String(row.campusId).trim();
-      const schoolYear = String(row.schoolYear ?? '2025-2026').trim();
-      return prisma.class.upsert({
-        where: { name_campusId_schoolYear: { name, campusId, schoolYear } },
-        update: { teacherName: String(row.teacherName ?? '').trim() || null },
-        create: { name, campusId, schoolYear, teacherName: String(row.teacherName ?? '').trim() || null },
-      });
-    }));
-    return NextResponse.json({ imported: result.length });
+    const result = await prisma.$transaction(async (tx) => {
+      let imported = 0;
+      for (const row of rows) {
+        const name = String(row.name).trim();
+        const campusId = String(row.campusId).trim();
+        const schoolYear = String(row.schoolYear ?? '2025-2026').trim();
+        const teacherName = String(row.teacherName ?? '').trim() || null;
+        const existing = await tx.class.findFirst({ where: { name, campusId, schoolYear }, select: { id: true } });
+        if (existing) {
+          await tx.class.update({ where: { id: existing.id }, data: { teacherName } });
+        } else {
+          await tx.class.create({ data: { name, campusId, schoolYear, teacherName } });
+        }
+        imported += 1;
+      }
+      return imported;
+    });
+    return NextResponse.json({ imported: result });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể nhập danh sách lớp' }, { status: 500 });
   }
