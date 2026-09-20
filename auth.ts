@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { loadTeacherClassIds } from '@/lib/teacher-scope';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -34,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const admin = await prisma.admin.findUnique({ where: { username: email } });
         if (admin) {
           const valid = await bcrypt.compare(password, admin.passwordHash);
-          if (valid) return { id: admin.id, name: admin.fullName, email: admin.username, role: 'admin', adminRole: admin.role, campusId: admin.campusId, classId: admin.classId } as any;
+          if (valid) return { id: admin.id, name: admin.fullName, email: admin.username, role: 'admin', adminRole: admin.role, campusId: admin.campusId, classId: admin.classId, classIds: await loadTeacherClassIds(admin.id, admin.classId) } as any;
         }
 
         return null;
@@ -66,6 +67,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           adminRole: admin.role,
           campusId: admin.campusId,
           classId: admin.classId,
+          classIds: await loadTeacherClassIds(admin.id, admin.classId),
         } as any;
       },
     }),
@@ -113,6 +115,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.adminRole = user.adminRole;
           token.campusId = user.campusId;
           token.classId = user.classId;
+          token.classIds = user.classIds;
         }
         if (user.role === 'student') {
           token.studentCode = user.studentCode;
@@ -131,6 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           session.user.adminRole = token.adminRole;
           session.user.campusId = token.campusId;
           session.user.classId = token.classId;
+          session.user.classIds = token.classIds;
         }
         if (token.role === 'student') {
           session.user.studentCode = token.studentCode;
