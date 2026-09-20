@@ -1,3 +1,5 @@
+import { normalizePaymentText } from './bank-matching';
+
 export type PendingFee = {
   id: string;
   studentId: string;
@@ -14,12 +16,14 @@ export function paymentDescription(student: PendingFee['student'], feeNames: str
 
 export function groupPendingFees(assignments: PendingFee[]) {
   const duplicateKeys = new Set<string>();
-  const nameCounts = new Map<string, number>();
+  const nameStudents = new Map<string, Set<string>>();
   for (const assignment of assignments) {
-    const key = assignment.student.fullName.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase() + '|' + assignment.student.class.name.toUpperCase();
-    nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+    const key = normalizePaymentText(assignment.student.fullName) + '|' + normalizePaymentText(assignment.student.class.name);
+    const ids = nameStudents.get(key) ?? new Set<string>();
+    ids.add(assignment.studentId);
+    nameStudents.set(key, ids);
   }
-  for (const [key, count] of nameCounts) if (count > 1) duplicateKeys.add(key);
+  for (const [key, ids] of nameStudents) if (ids.size > 1) duplicateKeys.add(key);
   const groups = new Map<string, PendingFee[]>();
   for (const assignment of assignments) {
     const account = assignment.feeType.bankAccountNumber;
@@ -31,8 +35,8 @@ export function groupPendingFees(assignments: PendingFee[]) {
   return [...groups.values()].map((items) => {
     const first = items[0];
     const feeNames = items.map((item) => item.feeType.name);
-    const nameKey = first.student.fullName.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase() + '|' + first.student.class.name.toUpperCase();
-    const duplicateNameSuffix = duplicateKeys.has(nameKey) ? first.student.studentCode.replace(/\\D/g, '').slice(-3) : undefined;
+    const nameKey = normalizePaymentText(first.student.fullName) + '|' + normalizePaymentText(first.student.class.name);
+    const duplicateNameSuffix = duplicateKeys.has(nameKey) ? first.student.studentCode.split('').filter((char) => char >= '0' && char <= '9').join('').slice(-3) : undefined;
     return {
       studentId: first.studentId,
       studentCode: first.student.studentCode,
