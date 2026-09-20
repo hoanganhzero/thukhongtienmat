@@ -96,6 +96,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       CCCD: '079012345678',
       'Họ tên': 'Nguyễn Văn A',
       'Lớp': allClasses[0]?.name ?? 'Tên lớp',
+      'Cơ sở': allClasses[0]?.campus?.name ?? 'Tên cơ sở',
+      'Năm học': allClasses[0]?.schoolYear ?? '2025-2026',
       'Ngày sinh': '2010-01-15',
       'SĐT': '0901234567',
       'SĐT phụ huynh': '0909876543',
