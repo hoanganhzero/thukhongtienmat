@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { studentCode: 'asc' },
+        orderBy: [{ class: { name: 'asc' } }, { fullName: 'asc' }, { studentCode: 'asc' }],
         include: { class: { include: { campus: true } } },
       }),
       prisma.student.count({ where }),
