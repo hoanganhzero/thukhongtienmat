@@ -2,6 +2,28 @@ type SchoolClass = { id: string; name: string; campusId?: string; schoolYear?: s
 
 const text = (value: unknown) => String(value ?? '').trim();
 
+function validIsoDate(year: number, month: number, day: number): string {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+}
+
+export function normalizeDateOfBirth(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return validIsoDate(value.getFullYear(), value.getMonth() + 1, value.getDate());
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const date = new Date(Date.UTC(1899, 11, 30 + Math.floor(value)));
+    return validIsoDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+  }
+  const raw = text(value);
+  let match = /^(\\d{1,2})[\\/.-](\\d{1,2})[\\/.-](\\d{4})$/.exec(raw);
+  if (match) return validIsoDate(Number(match[3]), Number(match[2]), Number(match[1]));
+  match = /^(\\d{4})[\\/.-](\\d{1,2})[\\/.-](\\d{1,2})$/.exec(raw);
+  if (match) return validIsoDate(Number(match[1]), Number(match[2]), Number(match[3]));
+  return '';
+}
 export function parseStudentRows(rows: Record<string, unknown>[], classes: SchoolClass[]) {
   const classMap = new Map<string, string>();
   classes.forEach((item) => {
@@ -39,7 +61,7 @@ export function parseStudentRows(rows: Record<string, unknown>[], classes: Schoo
       phone: text(row['SĐT'] ?? row.phone),
       parentPhone: text(row['SĐT phụ huynh'] ?? row.parentPhone),
       zaloPhone: text(row.Zalo ?? row.zaloPhone),
-      dateOfBirth: text(row['Ngày sinh'] ?? row.dateOfBirth),
+      dateOfBirth: normalizeDateOfBirth(row['Ngày sinh'] ?? row.dateOfBirth),
     });
   });
 
