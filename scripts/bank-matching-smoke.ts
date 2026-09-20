@@ -8,7 +8,8 @@ const fees = [
 ];
 
 assert.equal(paymentCode('HS-001'), 'TNHS001');
-assert.deepEqual(findPaymentMatch(fees, 150_000, 'TNHS001 TRAN VAN AN'), fees);\nassert.deepEqual(findPaymentMatch([{ ...base, id: 'b1', amount: 100_000, qrContent: null, feeType: { name: 'BHTT' } }], 100_000, 'SEVQR HS001 - TRAN VAN AN - 12C4 - BHTT'), [{ ...base, id: 'b1', amount: 100_000, qrContent: null, feeType: { name: 'BHTT' } }]);
+assert.deepEqual(findPaymentMatch(fees, 150_000, 'TNHS001 TRAN VAN AN'), fees);
+assert.deepEqual(findPaymentMatch([{ id: 'b1', studentId: 's1', amount: 100_000, qrContent: null, student: { studentCode: 'HS001', fullName: 'Tran Van An', class: { name: '12C4' } }, feeType: { name: 'BHTT' } }], 100_000, 'SEVQR Tran Van An 12C4 BHTT'), [{ id: 'b1', studentId: 's1', amount: 100_000, qrContent: null, student: { studentCode: 'HS001', fullName: 'Tran Van An', class: { name: '12C4' } }, feeType: { name: 'BHTT' } }]);\nassert.deepEqual(findPaymentMatch([{ ...base, id: 'b1', amount: 100_000, qrContent: null, feeType: { name: 'BHTT' } }], 100_000, 'SEVQR HS001 - TRAN VAN AN - 12C4 - BHTT'), [{ ...base, id: 'b1', amount: 100_000, qrContent: null, feeType: { name: 'BHTT' } }]);
 assert.deepEqual(findPaymentMatch(fees, 150_000, 'Nội dung bị cắt', 'TNHS001'), fees);
 assert.deepEqual(findPaymentMatch(fees, 100_000, 'TNHS001'), []);
 assert.deepEqual(findPaymentMatch(fees, 150_000, 'không có mã'), []);
