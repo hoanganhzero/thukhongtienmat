@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -31,6 +32,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const [allClasses, setAllClasses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [jsonImportOpen, setJsonImportOpen] = useState(false);
+  const [jsonImport, setJsonImport] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,6 +94,34 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     }
   };
 
+  const handleImportJson = async () => {
+    setImporting(true);
+    try {
+      const rows = JSON.parse(jsonImport);
+      if (!Array.isArray(rows)) throw new Error('Dữ liệu JSON phải là một mảng học sinh');
+      const parsed = parseStudentRows(rows, allClasses);
+      if (parsed.errors.length) {
+        toast.error(parsed.errors.slice(0, 5).join('\\n'));
+        return;
+      }
+      const res = await fetch('/api/students/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students: parsed.students }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập danh sách');
+      toast.success(`Đã thêm ${data.imported ?? 0} học sinh; bỏ qua ${data.skipped ?? 0} học sinh đã có trong lớp`);
+      setJsonImport('');
+      setJsonImportOpen(false);
+      loadStudents();
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Dữ liệu JSON không hợp lệ');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const downloadTemplate = () => {
     const sheet = XLSX.utils.json_to_sheet([{
       'Mã HS': 'HS001',
@@ -138,6 +169,12 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
           {!isTeacher && <><input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
           <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải tệp mẫu</Button>
           <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}</Button>
+          <Button variant="outline" onClick={() => setJsonImportOpen((value) => !value)}>Nhập JSON</Button>
+          {jsonImportOpen && <div className="basis-full rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+            <Label htmlFor="student-json-import">Dán dữ liệu JSON học sinh</Label>
+            <Textarea id="student-json-import" placeholder="Dữ liệu JSON dạng mảng, dùng cùng cột của tệp Excel" value={jsonImport} onChange={(event) => setJsonImport(event.target.value)} className="min-h-28 font-mono text-xs" />
+            <Button disabled={importing || !jsonImport.trim()} onClick={handleImportJson}>{importing ? 'Đang nhập...' : 'Nhập dữ liệu JSON'}</Button>
+          </div>}
           {selectedIds.length > 0 && <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>}
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm học sinh</Button></DialogTrigger>
