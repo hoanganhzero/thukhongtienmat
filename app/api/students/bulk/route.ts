@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
     const body = await request.json();
-    const rows = Array.isArray(body?.students) ? body.students.slice(0, 1000) : [];
+    const rows = Array.isArray(body?.students) ? body.students.slice(0, 5000) : [];
     if (!rows.length) return NextResponse.json({ error: 'Danh sách học sinh trống' }, { status: 400 });
 
     const classIds = new Set((await prisma.class.findMany({ select: { id: true } })).map((item) => item.id));
@@ -34,8 +34,49 @@ export async function POST(request: Request) {
       if (cccd) seenCccd.add(cccd);
     }
 
-    const passwordHashes = await Promise.all(rows.map((row: any) => bcrypt.hash(String(row.studentCode).trim(), 10)));
-    await prisma.$transaction(rows.map((row: any, index: number) => {
+    const codes = rows.map((row: any) => String(row.studentCode).trim());
+    const cccds = rows.map((row: any) => String(row.cccd ?? '').trim()).filter(Boolean);
+    const existing = await prisma.student.findMany({
+      where: {
+        OR: [
+          { studentCode: { in: codes } },
+          ...(cccds.length ? [{ cccd: { in: cccds } }] : []),
+        ],
+      },
+      select: { studentCode: true, cccd: true, classId: true },
+    });
+    const existingByCode = new Map(existing.map((student) => [student.studentCode, student]));
+    const existingByCccd = new Map(existing.filter((student) => student.cccd).map((student) => [student.cccd as string, student]));
+    const rowsToImport: any[] = [];
+    const conflicts: string[] = [];
+    let skipped = 0;
+
+    for (const row of rows) {
+      const code = String(row.studentCode).trim();
+      const cccd = String(row.cccd ?? '').trim();
+      const byCode = existingByCode.get(code);
+      const byCccd = cccd ? existingByCccd.get(cccd) : undefined;
+      const found = byCode ?? byCccd;
+      if (found) {
+        if (found.classId !== String(row.classId)) {
+          conflicts.push(code);
+        } else {
+          skipped += 1;
+        }
+        continue;
+      }
+      rowsToImport.push(row);
+    }
+
+    if (conflicts.length) {
+      return NextResponse.json({
+        error: `Một số học sinh đã tồn tại ở lớp khác: ${conflicts.slice(0, 20).join(', ')}${conflicts.length > 20 ? '…' : ''}`,
+        conflicts,
+      }, { status: 409 });
+    }
+
+    const passwordHashes = await Promise.all(rowsToImport.map((row: any) => bcrypt.hash(String(row.studentCode).trim(), 10)));
+    await prisma.$transaction(rowsToImport.map((row: any, index: number) => {
       const data = {
         fullName: String(row.fullName).trim(),
         cccd: String(row.cccd ?? '').trim() || null,
@@ -57,7 +98,7 @@ export async function POST(request: Request) {
       });
     }));
 
-    return NextResponse.json({ imported: rows.length });
+    return NextResponse.json({ imported: rowsToImport.length, skipped });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể nhập học sinh' }, { status: 500 });
   }
