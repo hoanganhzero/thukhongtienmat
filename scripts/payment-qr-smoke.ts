@@ -3,11 +3,11 @@ import { groupPendingFees } from '../lib/payment-qr';
 import { generateQrContent } from '../lib/utils';
 
 const groups = groupPendingFees([
-  { id: '1', studentId: 's1', amount: 100000, student: { studentCode: 'HS001', fullName: 'Trần Văn An', class: { name: '12C2' } }, feeType: { name: 'BHTT', bankAccountNumber: '123', bankAccountName: 'TRUNG TAM', bankName: 'VietinBank' } },
+  { id: '1', studentId: 's1', amount: 100000, student: { studentCode: '12345', fullName: 'Trần Quốc Hoàng Anh', class: { name: '12C4' } }, feeType: { name: 'BHTT', bankAccountNumber: '123', bankAccountName: 'TRUNG TAM', bankName: 'VietinBank' } },
 ]);
 
 assert.equal(groups.length, 1);
 assert.equal(groups[0].amount, 100000);
-assert.equal(groups[0].description, 'SEVQR HS001 - Trần Văn An - Lớp 12C2 - BHTT');
-assert.equal(generateQrContent('BHTT', 'HS001', 'Trần Văn An', '12C2'), 'SEVQR HS001 - Trần Văn An - Lớp 12C2 - BHTT');
+assert.equal(groups[0].description, 'SEVQR TN12345 - Tran Quoc Hoang Anh - 12C4 - BHTT');
+assert.equal(generateQrContent('BHTT', '12345', 'Trần Quốc Hoàng Anh', '12C4'), 'SEVQR TN12345 - Tran Quoc Hoang Anh - 12C4 - BHTT');
 console.log('payment QR smoke: ok');
