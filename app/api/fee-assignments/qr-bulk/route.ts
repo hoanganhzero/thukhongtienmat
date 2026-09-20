@@ -5,14 +5,16 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { groupPendingFees } from '@/lib/payment-qr';
 import { buildVietQrUrl } from '@/lib/utils';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 async function getGroups(request: Request, user: any) {
   const { searchParams } = new URL(request.url);
   const where: any = { status: 'pending' };
   if (searchParams.get('feeTypeId')) where.feeTypeId = searchParams.get('feeTypeId');
   if (user.adminRole === 'teacher') {
-    if (!user.classId) throw new Error('Tài khoản chưa được phân công lớp');
-    where.student = { classId: user.classId };
+    const classIds = teacherClassIds(user);
+    if (!classIds.length) throw new Error('Tài khoản chưa được phân công lớp');
+    where.student = { classId: { in: classIds } };
   } else if (searchParams.get('classId')) where.student = { classId: searchParams.get('classId') };
   if (user.adminRole !== 'teacher' && searchParams.get('campusId')) where.student = { class: { campusId: searchParams.get('campusId') } };
 
