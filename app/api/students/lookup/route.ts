@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     if (!student) return NextResponse.json({ error: 'Không tìm thấy học sinh' }, { status: 404 });
 
     const duplicateCount = await prisma.student.count({ where: { classId: student.class.id, fullName: student.fullName, NOT: { id: student.id } } });
-    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.replace(/\\D/g, '').slice(-3) : null;
+    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.split('').filter((char) => char >= '0' && char <= '9').join('').slice(-3) : null;
     return NextResponse.json({ ...student, duplicateNameSuffix, lookupToken: createLookupToken(student.id) });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
