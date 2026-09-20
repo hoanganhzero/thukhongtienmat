@@ -108,11 +108,10 @@ async function main() {
     const [name, campusName, schoolYear, teacherName, username, password] = line.split('|');
     const campus = await prisma.campus.findFirst({ where: { name: campusName }, select: { id: true } });
     if (!campus) continue;
-    const cls = await prisma.class.upsert({
-      where: { name_campusId_schoolYear: { name, campusId: campus.id, schoolYear } },
-      update: { teacherName: teacherName || null },
-      create: { name, campusId: campus.id, schoolYear, teacherName: teacherName || null },
-    });
+    const existingClass = await prisma.class.findFirst({ where: { name, campusId: campus.id, schoolYear }, select: { id: true } });
+    const cls = existingClass
+      ? await prisma.class.update({ where: { id: existingClass.id }, data: { teacherName: teacherName || null } })
+      : await prisma.class.create({ data: { name, campusId: campus.id, schoolYear, teacherName: teacherName || null } });
     if (username && teacherName && password) {
       teacherPasswords.set(username, password);
       const passwordHash = await bcrypt.hash(password, 10);
