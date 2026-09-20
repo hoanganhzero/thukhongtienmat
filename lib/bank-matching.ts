@@ -3,7 +3,7 @@ export type MatchableAssignment = {
   studentId: string;
   amount: number;
   qrContent: string | null;
-  student: { studentCode: string };
+  student: { studentCode: string; fullName?: string; class?: { name: string } };
   feeType: { name: string };
 };
 
@@ -26,9 +26,14 @@ export function findPaymentMatch(candidates: MatchableAssignment[], transferAmou
     const code = paymentCode(items[0].student.studentCode);
     if (content.includes(code) || sepayCode === code) return true;
 
-    const studentCode = normalizePaymentText(items[0].student.studentCode);
+    const first = items[0];
+    const studentCode = normalizePaymentText(first.student.studentCode);
     const hasStudentCode = content.includes(studentCode) || sepayCode === studentCode;
-    return hasStudentCode && items.every((item) => content.includes(normalizePaymentText(item.feeType.name)));
+    const studentName = normalizePaymentText(first.student.fullName);
+    const className = normalizePaymentText(first.student.class?.name);
+    const hasStudentIdentity = Boolean(studentName && className && content.includes(studentName) && content.includes(className));
+    const hasFeeNames = items.every((item) => content.includes(normalizePaymentText(item.feeType.name)));
+    return (hasStudentCode || hasStudentIdentity) && hasFeeNames;
   });
   if (matches.length === 1) return matches[0];
 
