@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseStudentRows } from '@/lib/student-import';
+import { formatDate } from '@/lib/date-format';
 
 export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const isTeacher = adminRole === 'teacher';
@@ -98,7 +99,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       'Lớp': allClasses[0]?.name ?? 'Tên lớp',
       'Cơ sở': allClasses[0]?.campus?.name ?? 'Tên cơ sở',
       'Năm học': allClasses[0]?.schoolYear ?? '2025-2026',
-      'Ngày sinh': '2010-01-15',
+      'Ngày sinh': '15/01/2010',
       'SĐT': '0901234567',
       'SĐT phụ huynh': '0909876543',
       Zalo: '0909876543',
