@@ -21,14 +21,24 @@ export function StudentDashboardClient({ session }: Props) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [tab, setTab] = useState<'fees' | 'notifications'>('fees');
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const user = session?.user;
   const studentId = user?.id;
 
   useEffect(() => {
     if (!studentId) return;
-    fetch(`/api/students/${studentId}`).then(r => r.json()).then(d => setStudent(d)).catch(() => {});
+    const refreshStudent = () => fetch(`/api/students/${studentId}`)
+      .then(r => r.json())
+      .then(d => {
+        setStudent(d);
+        setPaymentSuccess((d?.feeAssignments ?? []).some((fee: any) => fee.status === 'confirmed'));
+      })
+      .catch(() => {});
+    refreshStudent();
     fetch(`/api/notifications?studentId=${studentId}`).then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
+    const timer = window.setInterval(refreshStudent, 5000);
+    return () => window.clearInterval(timer);
   }, [studentId]);
 
   const handleUpload = async (feeAssignmentId: string, uploadData: any) => {
@@ -94,6 +104,15 @@ export function StudentDashboardClient({ session }: Props) {
             </div>
           </CardContent>
         </Card>
+
+        {paymentSuccess && (
+          <Card className="border-green-300 bg-green-50">
+            <CardContent className="p-5 text-center text-green-800">
+              <p className="text-lg font-bold">✅ Thanh toán thành công</p>
+              <p className="mt-1 text-sm">Hệ thống đã nhận được chuyển khoản và tự động xác nhận khoản thu.</p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary */}
         <div className="grid grid-cols-3 gap-3">
