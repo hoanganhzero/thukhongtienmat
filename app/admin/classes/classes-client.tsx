@@ -12,6 +12,7 @@ import { Users, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download, Upload } from 'lucide-react';
 import { parseClassRows } from '@/lib/class-import';
+import { formatDate } from '@/lib/date-format';
 
 export function ClassesClient() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -69,7 +70,7 @@ export function ClassesClient() {
         'Lớp': item?.class?.name ?? '',
         'Cơ sở': item?.class?.campus?.name ?? '',
         'Năm học': item?.class?.schoolYear ?? '',
-        'Ngày sinh': item?.dateOfBirth ? new Date(item.dateOfBirth).toISOString().slice(0, 10) : '',
+        'Ngày sinh': formatDate(item?.dateOfBirth),
         'SĐT': item?.phone ?? '',
         'SĐT phụ huynh': item?.parentPhone ?? '',
         Zalo: item?.zaloPhone ?? '',
