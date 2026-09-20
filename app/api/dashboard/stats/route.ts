@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { summarizeAssignments } from '@/lib/dashboard-stats';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 export async function GET(request: Request) {
   try {
@@ -15,8 +16,9 @@ export async function GET(request: Request) {
     const feeTypeId = params.get('feeTypeId');
     const studentWhere: any = {};
     if (user.adminRole === 'teacher') {
-      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
-      studentWhere.classId = user.classId;
+      const classIds = teacherClassIds(user);
+      if (!classIds.length) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      studentWhere.classId = { in: classIds };
     } else if (classId) studentWhere.classId = classId;
     else if (campusId) studentWhere.class = { campusId };
 
