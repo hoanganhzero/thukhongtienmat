@@ -10,7 +10,7 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
 
-export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string): string {
+export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string, _bankName?: string): string {
   const feeLabel = /bhtt/i.test(feeTypeName) ? 'BHTT' : feeTypeName;
   return fullName && className
     ? 'SEVQR ' + studentCode + ' - ' + fullName + ' - Lớp ' + className + ' - ' + feeLabel
