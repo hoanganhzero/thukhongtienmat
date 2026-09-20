@@ -12,7 +12,7 @@ async function isSuperAdmin() {
 export async function GET() {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
   return NextResponse.json(await prisma.admin.findMany({
-    select: { id: true, username: true, fullName: true, role: true, campusId: true, classId: true, campus: { select: { name: true } }, class: { select: { name: true } } },
+    select: { id: true, username: true, fullName: true, role: true, campusId: true, classId: true, campus: { select: { name: true } }, class: { select: { name: true } }, adminClasses: { select: { class: { select: { id: true, name: true, schoolYear: true } } }, orderBy: { class: { name: 'asc' } } } },
     orderBy: { fullName: 'asc' },
   }));
 }
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
   if (!username || !fullName || password.length < 6 || !roles.includes(data.role)) return NextResponse.json({ error: 'Thông tin chưa hợp lệ; mật khẩu tối thiểu 6 ký tự' }, { status: 400 });
   if (data.role === 'teacher' && !data.classId) return NextResponse.json({ error: 'Giáo viên phải được phân công lớp' }, { status: 400 });
   try {
-    return NextResponse.json(await prisma.admin.create({ data: { username, fullName, role: data.role, passwordHash: await bcrypt.hash(password, 10), campusId: data.campusId || null, classId: data.role === 'teacher' ? data.classId : null } }));
+    const account = await prisma.admin.create({ data: { username, fullName, role: data.role, passwordHash: await bcrypt.hash(password, 10), campusId: data.campusId || null, classId: data.role === 'teacher' ? data.classId : null } });
+    if (data.role === 'teacher' && data.classId) await prisma.adminClass.create({ data: { adminId: account.id, classId: data.classId } });
+    return NextResponse.json(account);
   } catch (error: any) {
     return NextResponse.json({ error: error?.code === 'P2002' ? 'Tên đăng nhập đã tồn tại' : 'Không thể tạo tài khoản' }, { status: 400 });
   }
