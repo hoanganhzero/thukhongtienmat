@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { generateQrContent } from '@/lib/utils';
 import { isSpecialBhytCategory } from '@/lib/bhyt';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 export async function GET(request: Request) {
   try {
@@ -24,8 +25,9 @@ export async function GET(request: Request) {
     if (status) where.status = status;
     if (feeTypeId) where.feeTypeId = feeTypeId;
     if (user.adminRole === 'teacher') {
-      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
-      where.student = { classId: user.classId };
+      const classIds = teacherClassIds(user);
+      if (!classIds.length) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      where.student = { classId: { in: classIds } };
     } else if (classId) where.student = { classId };
     if (user.adminRole !== 'teacher' && campusId) where.student = { ...(where.student ?? {}), class: { campusId } };
 
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
       });
       if (!student) continue;
 
-      const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name);
+      const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name, feeType.bankName);
 
       const unique = { studentId: sid, feeTypeId: data.feeTypeId, academicYear };
       const existing = await prisma.feeAssignment.findUnique({ where: { studentId_feeTypeId_academicYear: unique } });
