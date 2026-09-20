@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const providerTransactionId = String(payload.id ?? '');
   const transferAmount = Number(payload.transferAmount ?? 0);
   const accountNumber = String(payload.accountNumber ?? '');
-  if (!providerTransactionId || !accountNumber || transferAmount <= 0 || payload.transferType !== 'in') {
+  if (!providerTransactionId || !accountNumber || transferAmount <= 0 || String(payload.transferType ?? '').toLowerCase() !== 'in') {
     return NextResponse.json({ success: false, message: 'Invalid transaction' }, { status: 400 });
   }
 
