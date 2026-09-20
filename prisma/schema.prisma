@@ -30,6 +30,7 @@ model Class {
   createdAt   DateTime @default(now())
   students    Student[]
   admins      Admin[]
+  adminClasses AdminClass[]
 
   @@index([campusId])
   @@unique([name, campusId, schoolYear])
@@ -174,10 +175,24 @@ model Admin {
   campus       Campus?  @relation(fields: [campusId], references: [id])
   classId      String?
   class        Class?    @relation(fields: [classId], references: [id])
+  adminClasses AdminClass[]
   createdAt    DateTime @default(now())
 
   @@map("admins")
   @@index([classId])
+}
+
+model AdminClass {
+  id        String   @id @default(cuid())
+  adminId   String
+  classId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([adminId, classId])
+  @@index([classId])
+  @@map("admin_classes")
 }
 
 // NextAuth required tables
