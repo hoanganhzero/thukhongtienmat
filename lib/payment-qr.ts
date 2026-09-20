@@ -9,7 +9,8 @@ export type PendingFee = {
 };
 
 export function paymentDescription(student: PendingFee['student'], feeNames: string[]) {
-  return `${paymentCode(student.studentCode)} - ${student.fullName} - Lớp ${student.class.name} - Thanh toán tiền ${feeNames.join(', ')}`;
+  const feeLabel = feeNames.length === 1 && /bhtt/i.test(feeNames[0]) ? 'BHTT' : feeNames.join(', ');
+  return `SEVQR \${student.studentCode} - \${student.fullName} - Lớp \${student.class.name} - \${feeLabel}`;
 }
 
 export function groupPendingFees(assignments: PendingFee[]) {
@@ -17,7 +18,7 @@ export function groupPendingFees(assignments: PendingFee[]) {
   for (const assignment of assignments) {
     const account = assignment.feeType.bankAccountNumber;
     if (!account) continue;
-    const key = `${assignment.studentId}:${account}`;
+    const key = `\${assignment.studentId}:\${account}`;
     groups.set(key, [...(groups.get(key) ?? []), assignment]);
   }
 
