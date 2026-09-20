@@ -223,6 +223,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
             <TableHeader>
               <TableRow>
                 {!isTeacher && <TableHead className="w-10"><Checkbox aria-label="Chọn tất cả học sinh trên trang" checked={allCurrentSelected} onCheckedChange={(checked) => setSelectedIds(checked ? [...new Set([...selectedIds, ...currentIds])] : selectedIds.filter((id) => !currentIds.includes(id)))} /></TableHead>}
+                <TableHead className="w-16">STT</TableHead>
                 <TableHead>Mã HS</TableHead>
                 <TableHead>CCCD</TableHead>
                 <TableHead>Họ tên</TableHead>
@@ -233,9 +234,10 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((s: any) => (
+              {students.map((s: any, index: number) => (
                 <TableRow key={s?.id}>
                   {!isTeacher && <TableCell><Checkbox aria-label={`Chọn ${s?.fullName}`} checked={selectedIds.includes(s.id)} onCheckedChange={(checked) => setSelectedIds(checked ? [...selectedIds, s.id] : selectedIds.filter((id) => id !== s.id))} /></TableCell>}
+                  <TableCell className="font-mono text-sm">{(page - 1) * 20 + index + 1}</TableCell>
                   <TableCell className="font-mono text-sm">{s?.studentCode}</TableCell>
                   <TableCell className="font-mono text-sm">{s?.cccd ?? '—'}</TableCell>
                   <TableCell className="font-medium">{s?.fullName}</TableCell>
