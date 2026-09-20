@@ -81,7 +81,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập danh sách');
-      toast.success(`Đã nhập/cập nhật ${data.imported} học sinh`);
+      toast.success(`Đã thêm ${data.imported ?? 0} học sinh; bỏ qua ${data.skipped ?? 0} học sinh đã có trong lớp`);
       loadStudents();
     } catch (error: any) {
       toast.error(error?.message ?? 'Tệp Excel không hợp lệ');
