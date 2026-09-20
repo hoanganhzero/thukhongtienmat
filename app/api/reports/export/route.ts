@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import * as XLSX from 'xlsx';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 const statusMap: Record<string, string> = { pending: 'Chưa đóng', uploaded: 'Đã gửi biên lai', confirmed: 'Đã xác nhận', rejected: 'Bị từ chối', exempt: 'Không phải đóng' };
 const bhytMap: Record<string, string> = { student: 'Đóng BHYT tại trường', household: 'Đã mua BHYT hộ gia đình', near_poor: 'Hộ cận nghèo đã được cấp', poor: 'Hộ nghèo đã được cấp', commune_free: 'Xã/phường cấp miễn phí', other: 'Diện khác đã có BHYT' };
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     const where: any = {};
     if (params.get('feeTypeId')) where.feeTypeId = params.get('feeTypeId');
     if (params.get('status')) where.status = params.get('status');
-    if (user.adminRole === 'teacher') where.student = { classId: user.classId || '__none__' };
+    if (user.adminRole === 'teacher') where.student = { classId: { in: teacherClassIds(user) } };
     else if (params.get('classId')) where.student = { classId: params.get('classId') };
     else if (params.get('campusId')) where.student = { class: { campusId: params.get('campusId') } };
 
