@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "prisma migrate resolve --rolled-back 20260917_add_bank_transactions || true; prisma migrate resolve --rolled-back 20260920_configure_bhtt_vietinbank || true; (prisma migrate deploy || echo 'Migration du lieu khong thanh cong; tiep tuc khoi dong voi schema hien tai.') && (prisma db seed || echo 'Seed du lieu mau that bai; website van tiep tuc khoi dong.') && next start",
     "lint": "eslint ."
   },
