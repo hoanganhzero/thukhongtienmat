@@ -20,6 +20,7 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const doSearch = async (q: string) => {
     if (!q?.trim()) return;
@@ -28,7 +29,7 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
     try {
       const res = await fetch(`/api/students/lookup?q=${encodeURIComponent(q.trim())}`);
       const data = await res.json();
-      if (res.ok) { setStudent(data); setLookupToken(data?.lookupToken ?? ''); }
+      if (res.ok) { setStudent(data); setLookupToken(data?.lookupToken ?? ''); setPaymentSuccess((data?.feeAssignments ?? []).some((fee: any) => fee.status === 'confirmed')); }
       else { setStudent(null); setLookupToken(''); setError(data?.error ?? 'Không tìm thấy'); }
     } catch {
       setError('Lỗi kết nối');
@@ -38,6 +39,22 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
   };
 
   useEffect(() => { if (initialQuery) doSearch(initialQuery); }, []);
+
+  useEffect(() => {
+    if (!student?.id || !query) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/students/lookup?q=${encodeURIComponent(query.trim())}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setStudent(data);
+        setPaymentSuccess((data?.feeAssignments ?? []).some((fee: any) => fee.status === 'confirmed'));
+      } catch {
+        // Giữ nguyên dữ liệu hiện tại nếu lần cập nhật nền bị lỗi.
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [student?.id, query]);
 
   const handleUpload = async (feeAssignmentId: string, uploadData: any) => {
     await fetch('/api/payment-proofs', {
@@ -86,6 +103,14 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
 
         {student && (
           <div className="space-y-6">
+            {paymentSuccess && (
+              <Card className="border-green-300 bg-green-50">
+                <CardContent className="p-5 text-center text-green-800">
+                  <p className="text-lg font-bold">✅ Thanh toán thành công</p>
+                  <p className="mt-1 text-sm">Hệ thống đã nhận được chuyển khoản và tự động xác nhận khoản thu của học sinh.</p>
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
