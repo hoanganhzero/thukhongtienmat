@@ -14,8 +14,8 @@ export function generateQrContent(feeTypeName: string, studentCode: string, full
   const feeLabel = /bhtt/i.test(feeTypeName) ? 'BHTT' : feeTypeName;
   const name = fullName?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd');
   return fullName && className
-    ? 'SEVQR ' + studentCode + ' - ' + name + ' - ' + className + ' - ' + feeLabel
-    : 'SEVQR ' + paymentCode(studentCode) + ' - ' + feeLabel;
+    ? 'SEVQR ' + name + ' ' + className + ' ' + feeLabel
+    : 'SEVQR ' + studentCode + ' ' + feeLabel;
 }
 
 export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string, bankName?: string): string {
