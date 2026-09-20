@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { paymentCode } from './bank-matching';
 import { getVietQrBankBin } from './vietqr-banks';
 
 export function cn(...inputs: ClassValue[]) {
@@ -12,9 +11,10 @@ export function formatCurrency(amount: number): string {
 }
 
 export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string): string {
+  const feeLabel = /bhtt/i.test(feeTypeName) ? 'BHTT' : feeTypeName;
   return fullName && className
-    ? `${paymentCode(studentCode)} - ${fullName} - Lớp ${className} - Thanh toán tiền ${feeTypeName}`
-    : `${paymentCode(studentCode)} ${feeTypeName}`;
+    ? 'SEVQR ' + studentCode + ' - ' + fullName + ' - Lớp ' + className + ' - ' + feeLabel
+    : 'SEVQR ' + studentCode + ' - ' + feeLabel;
 }
 
 export function buildVietQrUrl(accountNo: string, amount: number, description: string, accountName: string, bankName?: string): string {
@@ -36,7 +36,7 @@ export function getStatusColor(status: string): string {
   const map: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
     uploaded: 'bg-blue-100 text-blue-800',
-    confirmed: 'bg-green-100 text-green-800',
+    confirmed: 'bg-green-100 text-green-700',
     rejected: 'bg-red-100 text-red-800',
     exempt: 'bg-sky-100 text-sky-800',
   };
