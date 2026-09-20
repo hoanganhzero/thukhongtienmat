@@ -17,3 +17,14 @@ export function parseDateInput(value: string): string | null {
   const date = new Date(`${iso}T00:00:00Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === iso ? iso : null;
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit', month: '2-digit', year: 'numeric',
+  hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh',
+});
+
+export function formatDateTime(value: string | number | Date | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date);
+}
