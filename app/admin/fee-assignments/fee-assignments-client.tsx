@@ -78,22 +78,62 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   });
 
   const printBulkQr = async () => {
+    if (filterClass === 'all') {
+      toast.error('Vui lòng chọn một lớp trước khi xuất PDF QR');
+      return;
+    }
     const popup = window.open('', '_blank');
     if (!popup) return toast.error('Trình duyệt đang chặn cửa sổ in');
-    popup.document.write('<p style="font-family:sans-serif;padding:24px">Đang tạo mã QR...</p>');
+    popup.document.write('<p style="font-family:Arial;padding:24px">Đang tạo PDF mã QR...</p>');
     setProcessingQr(true);
     try {
       const params = new URLSearchParams(qrFilters());
       const res = await fetch(`/api/fee-assignments/qr-bulk?${params}`);
       const groups = await res.json();
       if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
+      if (!Array.isArray(groups) || !groups.length) throw new Error('Lớp này chưa có khoản thu để tạo QR');
       const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
+      const className = groups[0]?.className ?? 'Lớp học';
       popup.document.open();
-      popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Mã QR khoản thu</title><style>body{font-family:Arial;margin:20px;color:#111}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.card{border:1px solid #bbb;border-radius:12px;padding:16px;break-inside:avoid;text-align:center}.qr{width:220px;height:220px}.name{font-size:18px;font-weight:700}.amount{font-size:20px;font-weight:700;color:#067647}.info{margin:5px 0}.description{font-size:12px}@media print{button{display:none}}@media(max-width:700px){.grid{grid-template-columns:1fr}}</style></head><body><button onclick="window.print()">In / Lưu PDF</button><h1>Mã QR thanh toán khoản thu</h1><div class="grid">${groups.map((group: any) => `<div class="card"><div class="name">${escape(group.fullName)} - Lớp ${escape(group.className)}</div><div class="info">${escape(group.feeNames.join(', '))}</div><img class="qr" src="${escape(group.qrUrl)}"><div class="amount">${escape(formatCurrency(group.amount))}</div><div class="info">${escape(group.bankName)} • ${escape(group.accountNo)}</div><div class="info">${escape(group.accountName)}</div><div class="description">${escape(group.description)}</div></div>`).join('')}</div></body></html>`);
+      popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tiền - Lớp ${escape(className)}</title><style>
+        @page{size:A4 portrait;margin:12mm}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;color:#111;font-family:Arial,sans-serif}
+        .toolbar{padding:12px 0 18px;text-align:center}
+        .toolbar button{background:#116b46;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}
+        .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
+        .page:last-child{page-break-after:auto;break-after:auto}
+        .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}
+        .title{font-size:24px;font-weight:700;margin:0 0 4mm}
+        .student{font-size:21px;font-weight:700;margin:2mm 0}
+        .meta{font-size:17px;margin:1.5mm 0}
+        .qr{width:92mm;height:92mm;object-fit:contain;margin:8mm 0 6mm}
+        .amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}
+        .bank{font-size:17px;margin:1.5mm 0}
+        .content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
+        .hint{font-size:13px;color:#555;margin-top:6mm}
+        @media print{.toolbar{display:none}.page{min-height:273mm}}
+      </style></head><body>
+        <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button></div>
+        ${groups.map((group: any) => `<section class="page">
+          <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
+          <h1 class="title">QR THANH TOÁN KHOẢN THU</h1>
+          <div class="student">${escape(group.fullName)}</div>
+          <div class="meta">Mã học sinh: <strong>${escape(group.studentCode)}</strong></div>
+          <div class="meta">Lớp: <strong>${escape(group.className)}</strong></div>
+          <div class="meta">${escape(group.feeNames.join(', '))}</div>
+          <img class="qr" src="${escape(group.qrUrl)}" alt="Mã QR thanh toán">
+          <div class="amount">${escape(formatCurrency(group.amount))}</div>
+          <div class="bank">${escape(group.bankName)} – STK: <strong>${escape(group.accountNo)}</strong></div>
+          <div class="bank">Tên tài khoản: <strong>${escape(group.accountName)}</strong></div>
+          <div class="content">Nội dung chuyển khoản:<br><strong>${escape(group.description)}</strong></div>
+          <div class="hint">Chỉ quét mã QR trên đúng trang của học sinh này. Kiểm tra lại họ tên, lớp và số tiền trước khi chuyển.</div>
+        </section>`).join('')}
+      </body></html>`);
       popup.document.close();
     } catch (error: any) {
       popup.close();
-      toast.error(error?.message ?? 'Không thể tạo QR');
+      toast.error(error?.message ?? 'Không thể tạo PDF QR');
     } finally {
       setProcessingQr(false);
     }
@@ -134,7 +174,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
           <p className="text-sm text-muted-foreground">{total} khoản thu đã gán</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!isTeacher && <Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Tạo/In QR hàng loạt</Button>}
+          {!isTeacher && <Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Xuất PDF QR theo lớp</Button>}
           <Button variant="outline" disabled={processingQr} onClick={sendBulkQr}><Send className="h-4 w-4 mr-1" /> Gửi QR cho học sinh</Button>
           {!isTeacher && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Gán khoản thu</Button></DialogTrigger>
