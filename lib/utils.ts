@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { paymentCode } from './bank-matching';
 import { getVietQrBankBin } from './vietqr-banks';
 
 export function cn(...inputs: ClassValue[]) {
@@ -15,7 +14,7 @@ export function generateQrContent(feeTypeName: string, studentCode: string, full
   const feeLabel = /bhtt/i.test(feeTypeName) ? 'BHTT' : feeTypeName;
   const name = fullName?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd');
   return fullName && className
-    ? 'SEVQR ' + paymentCode(studentCode) + ' - ' + name + ' - ' + className + ' - ' + feeLabel
+    ? 'SEVQR ' + studentCode + ' - ' + name + ' - ' + className + ' - ' + feeLabel
     : 'SEVQR ' + paymentCode(studentCode) + ' - ' + feeLabel;
 }
 
