@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/status-badge';
 import { FileUpload } from '@/components/file-upload';
 import { formatCurrency } from '@/lib/utils';
 import { groupPendingFees } from '@/lib/payment-qr';
+import { formatDateTime } from '@/lib/date-format';
 import { GraduationCap, Bell, LogOut, Upload as UploadIcon, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -190,7 +191,7 @@ export function StudentDashboardClient({ session }: Props) {
                   <CardContent className="p-4">
                     <p className="text-sm">{n?.message}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {n?.sentAt ? new Date(n.sentAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }) : ''}
+                      {n?.sentAt ? formatDateTime(n.sentAt) : ''}
                     </p>
                   </CardContent>
                 </Card>
