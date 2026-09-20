@@ -45,6 +45,46 @@ export function ClassesClient() {
     XLSX.writeFile(workbook, 'mau-danh-sach-lop.xlsx');
   };
 
+  const downloadDataWorkbook = async () => {
+    try {
+      const res = await fetch('/api/students?page=1&limit=10000');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể tải dữ liệu học sinh');
+      const students = Array.isArray(data?.students) ? data.students : [];
+      const classTeacherRows = classes.map((item: any) => ({
+        'Tên lớp': item?.name ?? '',
+        'Cơ sở': item?.campus?.name ?? '',
+        'Năm học': item?.schoolYear ?? '',
+        GVCN: item?.teacherName ?? '',
+      }));
+      const classRows = classes.map((item: any) => ({
+        'Tên lớp': item?.name ?? '',
+        'Cơ sở': item?.campus?.name ?? '',
+        'Năm học': item?.schoolYear ?? '',
+      }));
+      const studentRows = students.map((item: any) => ({
+        'Mã HS': item?.studentCode ?? '',
+        CCCD: item?.cccd ?? '',
+        'Họ tên': item?.fullName ?? '',
+        'Lớp': item?.class?.name ?? '',
+        'Cơ sở': item?.class?.campus?.name ?? '',
+        'Năm học': item?.class?.schoolYear ?? '',
+        'Ngày sinh': item?.dateOfBirth ? new Date(item.dateOfBirth).toISOString().slice(0, 10) : '',
+        'SĐT': item?.phone ?? '',
+        'SĐT phụ huynh': item?.parentPhone ?? '',
+        Zalo: item?.zaloPhone ?? '',
+      }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(classTeacherRows), 'Lớp + GVCN');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(classRows), 'Lớp');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(studentRows), 'Học sinh');
+      XLSX.writeFile(workbook, 'du-lieu-lop-gvcn-hoc-sinh.xlsx');
+      toast.success(`Đã tải ${classes.length} lớp và ${students.length} học sinh`);
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Không thể tải dữ liệu Excel');
+    }
+  };
+
   const handleImport = async (file?: File) => {
     if (!file) return;
     setImporting(true);
@@ -77,6 +117,7 @@ export function ClassesClient() {
         <div className="flex flex-wrap gap-2">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
           <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải mẫu Excel</Button>
+          <Button variant="outline" onClick={downloadDataWorkbook}><Download className="h-4 w-4 mr-1" /> Tải dữ liệu Excel</Button>
           <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập lớp hàng loạt'}</Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ name: '', campusId: '', schoolYear: '2025-2026', teacherName: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm lớp</Button></DialogTrigger>
