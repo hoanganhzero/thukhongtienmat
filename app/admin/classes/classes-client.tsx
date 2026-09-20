@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Users, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Download, Upload } from 'lucide-react';
+import { parseClassRows } from '@/lib/class-import';
 
 export function ClassesClient() {
   const [classes, setClasses] = useState<any[]>([]);
@@ -17,6 +20,8 @@ export function ClassesClient() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: '', campusId: '', schoolYear: '2025-2026', teacherName: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
 
   const loadClasses = () => {
     const q = filterCampus !== 'all' ? `?campusId=${filterCampus}` : '';
@@ -33,6 +38,35 @@ export function ClassesClient() {
     else toast?.error?.('Lỗi');
   };
 
+  const downloadTemplate = () => {
+    const sheet = XLSX.utils.json_to_sheet([{ 'Tên lớp': '10C1', 'Cơ sở': campuses[0]?.name ?? 'Tên cơ sở', 'Năm học': '2025-2026', GVCN: 'Nguyễn Văn A' }]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Danh sách lớp');
+    XLSX.writeFile(workbook, 'mau-danh-sach-lop.xlsx');
+  };
+
+  const handleImport = async (file?: File) => {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const parsed = parseClassRows(rows, campuses);
+      if (parsed.errors.length) throw new Error(parsed.errors.slice(0, 5).join('\n'));
+      const res = await fetch('/api/classes/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classes: parsed.classes }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập danh sách lớp');
+      toast.success(`Đã nhập/cập nhật ${data.imported} lớp`);
+      loadClasses();
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Tệp Excel không hợp lệ');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="p-6 max-w-[1200px] space-y-6">
       <div className="flex items-center justify-between">
@@ -40,6 +74,10 @@ export function ClassesClient() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Quản lý Lớp học</h1>
           <p className="text-sm text-muted-foreground">Danh sách lớp học theo cơ sở</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(event) => handleImport(event.target.files?.[0])} />
+          <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải mẫu Excel</Button>
+          <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập lớp hàng loạt'}</Button>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ name: '', campusId: '', schoolYear: '2025-2026', teacherName: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm lớp</Button></DialogTrigger>
           <DialogContent>
@@ -58,6 +96,7 @@ export function ClassesClient() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="flex gap-2">
