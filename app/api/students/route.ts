@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import bcrypt from 'bcryptjs';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 export async function GET(request: Request) {
   try {
@@ -18,8 +19,9 @@ export async function GET(request: Request) {
 
     const where: any = {};
     if (user.adminRole === 'teacher') {
-      if (!user.classId) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
-      where.classId = user.classId;
+      const classIds = teacherClassIds(user);
+      if (!classIds.length) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
+      where.classId = { in: classIds };
     } else if (classId) where.classId = classId;
     if (user.adminRole !== 'teacher' && campusId) where.class = { campusId };
     if (search) {
