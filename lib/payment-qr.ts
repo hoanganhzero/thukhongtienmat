@@ -1,5 +1,3 @@
-import { paymentCode } from './bank-matching';
-
 export type PendingFee = {
   id: string;
   studentId: string;
@@ -11,7 +9,7 @@ export type PendingFee = {
 export function paymentDescription(student: PendingFee['student'], feeNames: string[]) {
   const feeLabel = feeNames.length === 1 && /bhtt/i.test(feeNames[0]) ? 'BHTT' : feeNames.join(', ');
   const name = student.fullName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd');
-  return 'SEVQR ' + paymentCode(student.studentCode) + ' - ' + name + ' - ' + student.class.name + ' - ' + feeLabel;
+  return 'SEVQR ' + student.studentCode + ' - ' + name + ' - ' + student.class.name + ' - ' + feeLabel;
 }
 
 export function groupPendingFees(assignments: PendingFee[]) {
