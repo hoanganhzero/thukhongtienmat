@@ -27,7 +27,8 @@ export function findPaymentMatch(candidates: MatchableAssignment[], transferAmou
     if (content.includes(code) || sepayCode === code) return true;
 
     const studentCode = normalizePaymentText(items[0].student.studentCode);
-    return content.includes(studentCode) && items.every((item) => content.includes(normalizePaymentText(item.feeType.name)));
+    const hasStudentCode = content.includes(studentCode) || sepayCode === studentCode;
+    return hasStudentCode && items.every((item) => content.includes(normalizePaymentText(item.feeType.name)));
   });
   if (matches.length === 1) return matches[0];
 
