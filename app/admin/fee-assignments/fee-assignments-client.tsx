@@ -93,7 +93,12 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
       if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
       if (!Array.isArray(groups) || !groups.length) throw new Error('Lớp này chưa có khoản thu để tạo QR');
       const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
-      const className = groups[0]?.className ?? 'Lớp học';
+      const sortedGroups = [...groups].sort((a: any, b: any) => {
+        const classCompare = String(a?.className ?? '').localeCompare(String(b?.className ?? ''), 'vi', { numeric: true, sensitivity: 'base' });
+        if (classCompare !== 0) return classCompare;
+        return String(a?.fullName ?? '').localeCompare(String(b?.fullName ?? ''), 'vi', { sensitivity: 'base' });
+      });
+      const className = sortedGroups[0]?.className ?? 'Lớp học';
       popup.document.open();
       popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tiền - Lớp ${escape(className)}</title><style>
         @page{size:A4 portrait;margin:12mm}
@@ -104,8 +109,10 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
         .page:last-child{page-break-after:auto;break-after:auto}
         .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}
+        .group{font-size:18px;font-weight:700;color:#116b46;border-bottom:2px solid #116b46;padding-bottom:2mm;margin-bottom:4mm}
         .title{font-size:24px;font-weight:700;margin:0 0 4mm}
         .student{font-size:21px;font-weight:700;margin:2mm 0}
+        .serial{font-size:17px;font-weight:700;margin:1mm 0}
         .meta{font-size:17px;margin:1.5mm 0}
         .qr{width:92mm;height:92mm;object-fit:contain;margin:8mm 0 6mm}
         .amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}
@@ -115,9 +122,11 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         @media print{.toolbar{display:none}.page{min-height:273mm}}
       </style></head><body>
         <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button></div>
-        ${groups.map((group: any) => `<section class="page">
+        ${sortedGroups.map((group: any, index: number) => `<section class="page">
           <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
+          <div class="group">Nhóm lớp: ${escape(group.className)}</div>
           <h1 class="title">QR THANH TOÁN KHOẢN THU</h1>
+          <div class="serial">Số thứ tự: ${index + 1}</div>
           <div class="student">${escape(group.fullName)}</div>
           <div class="meta">Mã học sinh: <strong>${escape(group.studentCode)}</strong></div>
           <div class="meta">Lớp: <strong>${escape(group.className)}</strong></div>
