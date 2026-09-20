@@ -32,17 +32,34 @@ export async function GET(request: Request) {
       ];
     }
 
-    const [students, total] = await Promise.all([
-      prisma.student.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: [{ class: { name: 'asc' } }, { fullName: 'asc' }, { studentCode: 'asc' }],
-        include: { class: { include: { campus: true } } },
-      }),
-      prisma.student.count({ where }),
-    ]);
+    const allStudents = await prisma.student.findMany({
+      where,
+      include: { class: { include: { campus: true } } },
+    });
 
+    const sortText = (value: string) => value.trim().normalize('NFC');
+    const getGivenName = (value: string) => {
+      const words = sortText(value).split(/\\s+/).filter(Boolean);
+      return words.at(-1) ?? '';
+    };
+    const compareVietnamese = (a: string, b: string) =>
+      a.localeCompare(b, 'vi', { sensitivity: 'base', numeric: true });
+
+    allStudents.sort((a, b) => {
+      const classCompare = compareVietnamese(a.class?.name ?? '', b.class?.name ?? '');
+      if (classCompare !== 0) return classCompare;
+
+      const givenNameCompare = compareVietnamese(getGivenName(a.fullName), getGivenName(b.fullName));
+      if (givenNameCompare !== 0) return givenNameCompare;
+
+      const fullNameCompare = compareVietnamese(sortText(a.fullName), sortText(b.fullName));
+      if (fullNameCompare !== 0) return fullNameCompare;
+
+      return compareVietnamese(a.studentCode, b.studentCode);
+    });
+
+    const total = allStudents.length;
+    const students = allStudents.slice((page - 1) * limit, page * limit);
     return NextResponse.json({ students, total, page, limit });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
