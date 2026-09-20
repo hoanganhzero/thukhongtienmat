@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         id: true,
         studentCode: true,
         fullName: true,
-        class: { select: { name: true, campus: { select: { name: true } } } },
+        class: { select: { id: true, name: true, campus: { select: { name: true } } } },
         feeAssignments: {
           select: {
             id: true,
@@ -42,7 +42,9 @@ export async function GET(request: Request) {
 
     if (!student) return NextResponse.json({ error: 'Không tìm thấy học sinh' }, { status: 404 });
 
-    return NextResponse.json({ ...student, lookupToken: createLookupToken(student.id) });
+    const duplicateCount = await prisma.student.count({ where: { classId: student.class.id, fullName: student.fullName, NOT: { id: student.id } } });
+    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.replace(/\\D/g, '').slice(-3) : null;
+    return NextResponse.json({ ...student, duplicateNameSuffix, lookupToken: createLookupToken(student.id) });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
   }
