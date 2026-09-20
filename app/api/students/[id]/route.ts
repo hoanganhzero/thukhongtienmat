@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         parentPhone: true,
         dateOfBirth: true,
         zaloPhone: true,
-        class: { select: { name: true, campus: { select: { name: true } } } },
+        class: { select: { id: true, name: true, campus: { select: { name: true } } } },
         feeAssignments: {
           include: { feeType: true, paymentProofs: { select: { id: true, uploadedAt: true, verifiedAt: true } } },
           orderBy: { createdAt: 'desc' },
@@ -29,11 +29,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
     if (!student) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 });
+    const duplicateCount = await prisma.student.count({ where: { classId: student.class.id, fullName: student.fullName, NOT: { id: student.id } } });
+    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.replace(/\\D/g, '').slice(-3) : null;
     if (user?.adminRole === 'teacher') {
       const belongsToClass = user.classId && await prisma.student.count({ where: { id, classId: user.classId } });
       if (!belongsToClass) return NextResponse.json({ error: 'Không có quyền xem học sinh lớp khác' }, { status: 403 });
     }
-    return NextResponse.json(student);
+    return NextResponse.json({ ...student, duplicateNameSuffix });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
   }
