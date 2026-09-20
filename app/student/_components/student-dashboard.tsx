@@ -54,7 +54,7 @@ export function StudentDashboardClient({ session }: Props) {
   const confirmedCount = feeAssignments.filter((fa: any) => fa?.status === 'confirmed').length;
   const paymentGroups = student ? groupPendingFees(feeAssignments
     .filter((fee: any) => fee.status === 'pending')
-    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name } } }))) : [];
+    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name }, duplicateNameSuffix: student.duplicateNameSuffix } }))) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
