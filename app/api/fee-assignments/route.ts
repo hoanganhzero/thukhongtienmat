@@ -90,7 +90,9 @@ export async function POST(request: Request) {
       });
       if (!student) continue;
 
-      const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name, feeType.bankName);
+      const duplicateCount = await prisma.student.count({ where: { classId: student.classId, fullName: student.fullName, NOT: { id: sid } } });
+      const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.replace(/\\D/g, '').slice(-3) : undefined;
+      const qrContent = generateQrContent(feeType.name, student.studentCode, student.fullName, student.class.name, feeType.bankName, duplicateNameSuffix);
 
       const unique = { studentId: sid, feeTypeId: data.feeTypeId, academicYear };
       const existing = await prisma.feeAssignment.findUnique({ where: { studentId_feeTypeId_academicYear: unique } });
