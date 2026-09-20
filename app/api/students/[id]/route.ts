@@ -30,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
     if (!student) return NextResponse.json({ error: 'Không tìm thấy' }, { status: 404 });
     const duplicateCount = await prisma.student.count({ where: { classId: student.class.id, fullName: student.fullName, NOT: { id: student.id } } });
-    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.replace(/\\D/g, '').slice(-3) : null;
+    const duplicateNameSuffix = duplicateCount > 0 ? student.studentCode.split('').filter((char) => char >= '0' && char <= '9').join('').slice(-3) : null;
     if (user?.adminRole === 'teacher') {
       const belongsToClass = user.classId && await prisma.student.count({ where: { id, classId: user.classId } });
       if (!belongsToClass) return NextResponse.json({ error: 'Không có quyền xem học sinh lớp khác' }, { status: 403 });
