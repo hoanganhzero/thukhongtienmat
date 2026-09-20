@@ -8,6 +8,6 @@ const groups = groupPendingFees([
 
 assert.equal(groups.length, 1);
 assert.equal(groups[0].amount, 100000);
-assert.equal(groups[0].description, 'SEVQR 12345 - Tran Quoc Hoang Anh - 12C4 - BHTT');
-assert.equal(generateQrContent('BHTT', '12345', 'Trần Quốc Hoàng Anh', '12C4'), 'SEVQR 12345 - Tran Quoc Hoang Anh - 12C4 - BHTT');
+assert.equal(groups[0].description, 'SEVQR Tran Quoc Hoang Anh 12C4 BHTT');
+assert.equal(generateQrContent('BHTT', '12345', 'Trần Quốc Hoàng Anh', '12C4'), 'SEVQR Tran Quoc Hoang Anh 12C4 BHTT');
 console.log('payment QR smoke: ok');
