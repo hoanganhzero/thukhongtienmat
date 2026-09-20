@@ -19,7 +19,6 @@ export async function POST(request: Request) {
     if (!rows.length) return NextResponse.json({ error: 'Danh sách lớp và GVCN trống' }, { status: 400 });
 
     const seenClasses = new Set<string>();
-    const seenUsernames = new Set<string>();
     for (const [index, row] of rows.entries()) {
       const line = index + 2;
       const name = text(row?.className);
@@ -29,16 +28,13 @@ export async function POST(request: Request) {
       const username = text(row?.username);
       const password = text(row?.password);
       const classKey = `${name.toLowerCase()}|${campusId}|${schoolYear.toLowerCase()}`;
-      const usernameKey = username.toLowerCase();
 
       if (!name || !campusId || !fullName || !username || !password) {
         return NextResponse.json({ error: `Dòng ${line}: bắt buộc nhập đủ lớp, cơ sở, họ tên, tên đăng nhập và mật khẩu` }, { status: 400 });
       }
       if (password.length < 6) return NextResponse.json({ error: `Dòng ${line}: mật khẩu phải có ít nhất 6 ký tự` }, { status: 400 });
       if (seenClasses.has(classKey)) return NextResponse.json({ error: `Dòng ${line}: trùng lớp, cơ sở và năm học trong tệp` }, { status: 400 });
-      if (seenUsernames.has(usernameKey)) return NextResponse.json({ error: `Dòng ${line}: trùng tên đăng nhập trong tệp` }, { status: 400 });
       seenClasses.add(classKey);
-      seenUsernames.add(usernameKey);
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -57,11 +53,17 @@ export async function POST(request: Request) {
           ? await tx.class.update({ where: { id: existingClass.id }, data: { teacherName: fullName } })
           : await tx.class.create({ data: { name, campusId, schoolYear, teacherName: fullName } });
 
-        await tx.admin.upsert({
+        const admin = await tx.admin.upsert({
           where: { username },
-          update: { fullName, role: 'teacher', campusId, classId: classRecord.id, passwordHash },
+          update: { fullName, role: 'teacher', campusId, passwordHash },
           create: { username, fullName, role: 'teacher', campusId, classId: classRecord.id, passwordHash },
         });
+        await tx.adminClass.upsert({
+          where: { adminId_classId: { adminId: admin.id, classId: classRecord.id } },
+          update: {},
+          create: { adminId: admin.id, classId: classRecord.id },
+        });
+        if (!admin.classId) await tx.admin.update({ where: { id: admin.id }, data: { classId: classRecord.id } });
         imported += 1;
       }
       return imported;
