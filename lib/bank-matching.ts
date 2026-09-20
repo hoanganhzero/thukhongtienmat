@@ -21,7 +21,8 @@ export function findPaymentMatch(candidates: MatchableAssignment[], transferAmou
   const groups = new Map<string, MatchableAssignment[]>();
   for (const item of candidates) groups.set(item.studentId, [...(groups.get(item.studentId) ?? []), item]);
 
-  const matches = [...groups.values()].filter((items) => {
+  const groupList = [...groups.values()];
+  const matches = groupList.filter((items) => {
     if (items.reduce((sum, item) => sum + item.amount, 0) !== transferAmount) return false;
     const code = paymentCode(items[0].student.studentCode);
     if (content.includes(code) || sepayCode === code) return true;
@@ -31,7 +32,9 @@ export function findPaymentMatch(candidates: MatchableAssignment[], transferAmou
     const hasStudentCode = content.includes(studentCode) || sepayCode === studentCode;
     const studentName = normalizePaymentText(first.student.fullName);
     const className = normalizePaymentText(first.student.class?.name);
-    const hasStudentIdentity = Boolean(studentName && className && content.includes(studentName) && content.includes(className));
+    const sameNameClassCount = groupList.filter((group) => normalizePaymentText(group[0].student.fullName) === studentName && normalizePaymentText(group[0].student.class?.name) === className).length;
+    const suffix = first.student.studentCode.split('').filter((char) => char >= '0' && char <= '9').join('').slice(-3);
+    const hasStudentIdentity = Boolean(studentName && className && content.includes(studentName) && content.includes(className) && (sameNameClassCount === 1 || content.includes(studentName + suffix)));
     const hasFeeNames = items.every((item) => content.includes(normalizePaymentText(item.feeType.name)));
     return (hasStudentCode || hasStudentIdentity) && hasFeeNames;
   });
