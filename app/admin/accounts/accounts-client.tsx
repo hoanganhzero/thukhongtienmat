@@ -60,8 +60,8 @@ export function AccountsClient() {
       ['Mỗi dòng tạo hoặc cập nhật 01 lớp và 01 tài khoản giáo viên chủ nhiệm.'],
       ['Không đổi tên 6 cột ở sheet Lớp và GVCN.'],
       ['Cơ sở phải ghi đúng tên cơ sở đang có trong hệ thống.'],
-      ['Tên đăng nhập phải duy nhất; mật khẩu tối thiểu 6 ký tự.'],
-      ['Nếu tên đăng nhập đã tồn tại, hệ thống cập nhật lại GVCN, lớp và mật khẩu theo dòng Excel.'],
+      ['Một giáo viên có thể xuất hiện nhiều dòng để chủ nhiệm nhiều lớp; dùng cùng tên đăng nhập.'],
+      ['Nếu tên đăng nhập đã tồn tại, hệ thống gắn thêm lớp mới vào cùng tài khoản và cập nhật mật khẩu.'],
       ['Năm học để dạng 2025-2026 hoặc năm học đang sử dụng.'],
     ]);
     guide['!cols'] = [{ wch: 110 }];
@@ -135,6 +135,6 @@ export function AccountsClient() {
         </DialogContent>
       </Dialog>
     </div>
-    <div className="grid gap-3 sm:grid-cols-2">{accounts.map((account) => <Card key={account.id}><CardContent className="flex items-start justify-between p-4"><div className="flex gap-3"><UserRound className="mt-1 h-5 w-5 text-primary" /><div><p className="font-semibold">{account.fullName}</p><p className="text-sm text-muted-foreground">{account.username} • {roleNames[account.role] ?? account.role}</p>{account.class?.name && <p className="text-sm">Lớp: {account.class.name}</p>}</div></div><div className="flex"><Button variant="ghost" size="icon" onClick={() => { setEditing(account); setForm({ username: account.username, password: '', fullName: account.fullName, role: account.role, campusId: account.campusId ?? '', classId: account.classId ?? '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={async () => { if (!confirm(`Xóa tài khoản ${account.username}?`)) return; const res = await fetch(`/api/accounts/${account.id}`, { method: 'DELETE' }); const data = await res.json().catch(() => ({})); if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa'); toast.success('Đã xóa tài khoản'); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></CardContent></Card>)}</div>
+    <div className="grid gap-3 sm:grid-cols-2">{accounts.map((account) => <Card key={account.id}><CardContent className="flex items-start justify-between p-4"><div className="flex gap-3"><UserRound className="mt-1 h-5 w-5 text-primary" /><div><p className="font-semibold">{account.fullName}</p><p className="text-sm text-muted-foreground">{account.username} • {roleNames[account.role] ?? account.role}</p>{account.role === 'teacher' && account.adminClasses?.length ? <p className="text-sm">Lớp: {account.adminClasses.map((item: any) => item.class.name).join(', ')}</p> : account.class?.name && <p className="text-sm">Lớp: {account.class.name}</p>}</div></div><div className="flex"><Button variant="ghost" size="icon" onClick={() => { setEditing(account); setForm({ username: account.username, password: '', fullName: account.fullName, role: account.role, campusId: account.campusId ?? '', classId: account.classId ?? '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" onClick={async () => { if (!confirm(`Xóa tài khoản ${account.username}?`)) return; const res = await fetch(`/api/accounts/${account.id}`, { method: 'DELETE' }); const data = await res.json().catch(() => ({})); if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa'); toast.success('Đã xóa tài khoản'); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></CardContent></Card>)}</div>
   </div>;
 }
