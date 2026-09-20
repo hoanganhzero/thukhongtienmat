@@ -37,6 +37,7 @@ export async function GET(request: Request) {
       include: { class: { include: { campus: true } } },
     });
 
+    // Sorting rule: class -> given name (last word) -> family name and middle name -> student code.
     const sortText = (value: string) => value.trim().normalize('NFC');
     const getGivenName = (value: string) => {
       const words = sortText(value).split(/\\s+/).filter(Boolean);
