@@ -4,16 +4,18 @@ import { formatDate } from '@/lib/date-format';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { amountInWords } from '@/lib/receipt';
+import { teacherClassIds } from '@/lib/teacher-scope';
 
 const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = (await auth())?.user as any;
-  if (user?.role !== 'admin') return new Response('Chưa đăng nhập', { status: 401 });
+  if (!user || !['admin', 'student'].includes(user.role)) return new Response('Chưa đăng nhập', { status: 401 });
   const { id } = await params;
   const item = await prisma.feeAssignment.findUnique({ where: { id }, include: { student: { include: { class: { include: { campus: true } } } }, feeType: true } });
   if (!item || item.status !== 'confirmed') return new Response('Chỉ xuất chứng từ cho khoản đã xác nhận thanh toán', { status: 400 });
-  if (user.adminRole === 'teacher' && item.student.classId !== user.classId) return new Response('Không có quyền', { status: 403 });
+  if (user.role === 'student' && item.studentId !== user.id) return new Response('Không có quyền xem chứng từ của học sinh khác', { status: 403 });
+  if (user.adminRole === 'teacher' && !teacherClassIds(user).includes(item.student.classId)) return new Response('Không có quyền', { status: 403 });
   const settings = Object.fromEntries((await prisma.appSetting.findMany()).map((setting) => [setting.key, setting.value]));
   const paidAt = item.paidAt ?? item.updatedAt;
   const receiptNo = `${settings.receipt_prefix || 'PT'}-${paidAt.getFullYear()}-${item.id.slice(-8).toUpperCase()}`;
