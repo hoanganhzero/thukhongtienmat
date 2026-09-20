@@ -18,9 +18,9 @@ export function normalizeDateOfBirth(value: unknown): string {
     return validIsoDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
   }
   const raw = text(value);
-  let match = /^(\\d{1,2})[\\/.-](\\d{1,2})[\\/.-](\\d{4})$/.exec(raw);
+  let match = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(raw);
   if (match) return validIsoDate(Number(match[3]), Number(match[2]), Number(match[1]));
-  match = /^(\\d{4})[\\/.-](\\d{1,2})[\\/.-](\\d{1,2})$/.exec(raw);
+  match = /^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/.exec(raw);
   if (match) return validIsoDate(Number(match[1]), Number(match[2]), Number(match[3]));
   return '';
 }
