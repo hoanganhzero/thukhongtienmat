@@ -52,11 +52,10 @@ export async function POST(request: Request) {
         const password = text(row.password);
         const passwordHash = await bcrypt.hash(password, 10);
 
-        const classRecord = await tx.class.upsert({
-          where: { name_campusId_schoolYear: { name, campusId, schoolYear } },
-          update: { teacherName: fullName },
-          create: { name, campusId, schoolYear, teacherName: fullName },
-        });
+        const existingClass = await tx.class.findFirst({ where: { name, campusId, schoolYear }, select: { id: true } });
+        const classRecord = existingClass
+          ? await tx.class.update({ where: { id: existingClass.id }, data: { teacherName: fullName } })
+          : await tx.class.create({ data: { name, campusId, schoolYear, teacherName: fullName } });
 
         await tx.admin.upsert({
           where: { username },
