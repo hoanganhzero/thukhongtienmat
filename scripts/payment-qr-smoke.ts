@@ -10,4 +10,5 @@ assert.equal(groups.length, 1);
 assert.equal(groups[0].amount, 100000);
 assert.equal(groups[0].description, 'SEVQR Tran Quoc Hoang Anh 12C4 BHTT');
 assert.equal(generateQrContent('BHTT', '12345', 'Trần Quốc Hoàng Anh', '12C4'), 'SEVQR Tran Quoc Hoang Anh 12C4 BHTT');
+assert.equal(generateQrContent('BHTT', '12345', 'Trần Quốc Hoàng Anh', '12C4', undefined, '345'), 'SEVQR Tran Quoc Hoang Anh 345 12C4 BHTT');
 console.log('payment QR smoke: ok');
