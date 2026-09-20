@@ -57,7 +57,7 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
 
   const paymentGroups = student ? groupPendingFees((student.feeAssignments ?? [])
     .filter((fee: any) => fee.status === 'pending')
-    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name } } }))) : [];
+    .map((fee: any) => ({ ...fee, studentId: student.id, student: { studentCode: student.studentCode, fullName: student.fullName, class: { name: student.class.name }, duplicateNameSuffix: student.duplicateNameSuffix } }))) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
