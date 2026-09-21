@@ -111,20 +111,29 @@ export async function DELETE(request: Request) {
     const ids: string[] = [...new Set<string>(Array.isArray(body?.ids) ? body.ids.map((id: unknown) => String(id)) : [])].slice(0, 1000);
     if (!ids.length) return NextResponse.json({ error: 'Chưa chọn học sinh' }, { status: 400 });
 
-    const assignments = await prisma.feeAssignment.findMany({
-      where: { studentId: { in: ids } },
-      select: { id: true },
+    const result = await prisma.student.updateMany({
+      where: { id: { in: ids }, deletedAt: null },
+      data: { deletedAt: new Date() },
     });
-    const assignmentIds = assignments.map((item) => item.id);
-    await prisma.$transaction([
-      prisma.paymentProof.deleteMany({ where: { feeAssignmentId: { in: assignmentIds } } }),
-      prisma.notification.deleteMany({ where: { studentId: { in: ids } } }),
-      prisma.feeAssignment.deleteMany({ where: { studentId: { in: ids } } }),
-      prisma.student.deleteMany({ where: { id: { in: ids } } }),
-    ]);
-
-    return NextResponse.json({ deleted: ids.length });
+    return NextResponse.json({ deleted: result.count });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể xóa học sinh' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    if (!(await isAdmin())) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const body = await request.json();
+    const ids: string[] = [...new Set<string>(Array.isArray(body?.ids) ? body.ids.map((id: unknown) => String(id)) : [])].slice(0, 1000);
+    if (!ids.length) return NextResponse.json({ error: 'Chưa chọn học sinh' }, { status: 400 });
+
+    const result = await prisma.student.updateMany({
+      where: { id: { in: ids }, deletedAt: { not: null } },
+      data: { deletedAt: null },
+    });
+    return NextResponse.json({ restored: result.count });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message ?? 'Không thể khôi phục học sinh' }, { status: 500 });
   }
 }
