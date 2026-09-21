@@ -156,7 +156,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     setProcessingQr(true);
     try {
       const params = new URLSearchParams(qrFilters());
-      const res = await fetch(\`/api/fee-assignments/qr-bulk?\${params}\`);
+      const res = await fetch(`/api/fee-assignments/qr-bulk?${params}`);
       const groups = await res.json();
       if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
       if (!Array.isArray(groups) || !groups.length) throw new Error('Lớp này chưa có khoản thu để tạo QR');
@@ -166,7 +166,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         String(a?.fullName ?? '').localeCompare(String(b?.fullName ?? ''), 'vi', { sensitivity: 'base' })
       );
       const className = sortedGroups[0]?.className ?? 'Lop hoc';
-      const html = \`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tien - Lop \${escape(className)}</title><style>
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>QR thu tien - Lop ${escape(className)}</title><style>
         @page{size:A4 portrait;margin:12mm}
         body{margin:0;color:#111;font-family:Arial,"Segoe UI",sans-serif}
         .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
@@ -181,27 +181,27 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         .amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}
         .bank{font-size:17px;margin:1.5mm 0}
         .content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
-      </style></head><body>\${sortedGroups.map((group: any, index: number) => \`<section class="page">
+      </style></head><body>${sortedGroups.map((group: any, index: number) => `<section class="page">
         <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
-        <div class="group">Nhóm lớp: \${escape(group.className)}</div>
+        <div class="group">Nhóm lớp: ${escape(group.className)}</div>
         <h1 class="title">QR THANH TOÁN KHOẢN THU</h1>
-        <div class="serial">Số thứ tự: \${index + 1}</div>
-        <div class="student">\${escape(group.fullName)}</div>
-        <div class="meta">Mã học sinh: <strong>\${escape(group.studentCode)}</strong></div>
-        <div class="meta">Lớp: <strong>\${escape(group.className)}</strong></div>
-        <div class="meta">\${escape(group.feeNames.join(', '))}</div>
-        <img class="qr" src="\${escape(group.qrUrl)}" alt="Mã QR thanh toán">
-        <div class="amount">\${escape(formatCurrency(group.amount))}</div>
-        <div class="bank">\${escape(group.bankName)} – STK: <strong>\${escape(group.accountNo)}</strong></div>
-        <div class="bank">Tên tài khoản: <strong>\${escape(group.accountName)}</strong></div>
-        <div class="content">Nội dung chuyển khoản:<br><strong>\${escape(group.description)}</strong></div>
-      </section>\`).join('')}</body></html>\`;
+        <div class="serial">Số thứ tự: ${index + 1}</div>
+        <div class="student">${escape(group.fullName)}</div>
+        <div class="meta">Mã học sinh: <strong>${escape(group.studentCode)}</strong></div>
+        <div class="meta">Lớp: <strong>${escape(group.className)}</strong></div>
+        <div class="meta">${escape(group.feeNames.join(', '))}</div>
+        <img class="qr" src="${escape(group.qrUrl)}" alt="Mã QR thanh toán">
+        <div class="amount">${escape(formatCurrency(group.amount))}</div>
+        <div class="bank">${escape(group.bankName)} – STK: <strong>${escape(group.accountNo)}</strong></div>
+        <div class="bank">Tên tài khoản: <strong>${escape(group.accountName)}</strong></div>
+        <div class="content">Nội dung chuyển khoản:<br><strong>${escape(group.description)}</strong></div>
+      </section>`).join('')}</body></html>`;
 
       const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = \`QR-thu-tien-\${className.replace(/[^a-zA-Z0-9À-ỹ_-]+/g, '-')}.doc\`;
+      link.download = `QR-thu-tien-${className.replace(/[^a-zA-Z0-9À-ỹ_-]+/g, '-')}.doc`;
       document.body.appendChild(link);
       link.click();
       link.remove();
