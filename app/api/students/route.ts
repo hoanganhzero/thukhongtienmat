@@ -16,8 +16,9 @@ export async function GET(request: Request) {
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') ?? '1');
     const limit = parseInt(searchParams.get('limit') ?? '50');
+    const showDeleted = searchParams.get('deleted') === '1' && user.adminRole !== 'teacher';
 
-    const where: any = {};
+    const where: any = { deletedAt: showDeleted ? { not: null } : null };
     if (user.adminRole === 'teacher') {
       const classIds = teacherClassIds(user);
       if (!classIds.length) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
