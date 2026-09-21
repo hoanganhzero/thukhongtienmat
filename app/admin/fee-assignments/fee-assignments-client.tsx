@@ -105,7 +105,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         *{box-sizing:border-box}
         html,body{margin:0;padding:0;color:#111;font-family:Arial,sans-serif}
         .toolbar{padding:12px 0 18px;text-align:center}
-        .toolbar button{background:#116b46;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}
+        .toolbar button{background:#116b46;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}.toolbar p{margin:8px 0 0;color:#555;font-size:13px}
         .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
         .page:last-child{page-break-after:auto;break-after:auto}
         .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}
@@ -120,8 +120,8 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         .content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
         .hint{font-size:13px;color:#555;margin-top:6mm}
         @media print{.toolbar{display:none}.page{min-height:273mm}}
-      </style></head><body>
-        <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button></div>
+      </style></head><body onload="setTimeout(() => window.print(), 500)">
+        <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button><p>Trong hộp thoại in, chọn máy in <strong>Lưu dưới dạng PDF</strong> để tải tệp PDF về máy.</p></div>
         ${sortedGroups.map((group: any, index: number) => `<section class="page">
           <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
           <div class="group">Nhóm lớp: ${escape(group.className)}</div>
