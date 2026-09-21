@@ -12,7 +12,7 @@ export function formatCurrency(amount: number): string {
 
 export function generateQrContent(feeTypeName: string, studentCode: string, fullName?: string, className?: string, _bankName?: string, duplicateNameSuffix?: string): string {
   const feeLabel = /bhtt/i.test(feeTypeName) ? 'BHTT' : feeTypeName;
-  const name = fullName?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd');
+  const name = fullName?.trim();
   return fullName && className
     ? 'SEVQR ' + name + (duplicateNameSuffix ? ' ' + duplicateNameSuffix : '') + ' ' + className + ' ' + feeLabel
     : 'SEVQR ' + studentCode + ' ' + feeLabel;
