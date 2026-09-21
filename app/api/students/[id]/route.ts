@@ -74,8 +74,21 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const user = session?.user as any;
     if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const { id } = await params;
-    await prisma.student.delete({ where: { id } });
+    await prisma.student.update({ where: { id }, data: { deletedAt: new Date() } });
     return NextResponse.json({ success: true });
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth();
+    const user = session?.user as any;
+    if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
+    const { id } = await params;
+    await prisma.student.update({ where: { id }, data: { deletedAt: null } });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message ?? 'Không thể khôi phục học sinh' }, { status: 500 });
+  }
+}
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
   }
