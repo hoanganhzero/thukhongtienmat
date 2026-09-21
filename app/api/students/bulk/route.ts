@@ -6,7 +6,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
 async function isAdmin() {
-  return ((await auth())?.user as any)?.role === 'admin';
+  const user = (await auth())?.user as any;
+  return user?.role === 'admin' && user.adminRole !== 'teacher';
 }
 
 export async function POST(request: Request) {
