@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/status-badge';
-import { Plus, Printer, Send, Settings2 } from 'lucide-react';
+import { Plus, Printer, Send, Settings2, FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { parseDateInput } from '@/lib/date-format';
@@ -148,6 +148,72 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     }
   };
 
+  const exportBulkWord = async () => {
+    if (filterClass === 'all') {
+      toast.error('Vui lòng chọn một lớp trước khi xuất Word QR');
+      return;
+    }
+    setProcessingQr(true);
+    try {
+      const params = new URLSearchParams(qrFilters());
+      const res = await fetch(\`/api/fee-assignments/qr-bulk?\${params}\`);
+      const groups = await res.json();
+      if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
+      if (!Array.isArray(groups) || !groups.length) throw new Error('Lớp này chưa có khoản thu để tạo QR');
+
+      const escape = (value: unknown) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char]!);
+      const sortedGroups = [...groups].sort((a: any, b: any) =>
+        String(a?.fullName ?? '').localeCompare(String(b?.fullName ?? ''), 'vi', { sensitivity: 'base' })
+      );
+      const className = sortedGroups[0]?.className ?? 'Lop hoc';
+      const html = \`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tien - Lop \${escape(className)}</title><style>
+        @page{size:A4 portrait;margin:12mm}
+        body{margin:0;color:#111;font-family:Arial,"Segoe UI",sans-serif}
+        .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
+        .page:last-child{page-break-after:auto;break-after:auto}
+        .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}
+        .group{font-size:18px;font-weight:700;color:#116b46;border-bottom:2px solid #116b46;padding-bottom:2mm;margin-bottom:4mm}
+        .title{font-size:24px;font-weight:700;margin:0 0 4mm}
+        .student{font-size:21px;font-weight:700;margin:2mm 0}
+        .serial{font-size:17px;font-weight:700;margin:1mm 0}
+        .meta{font-size:17px;margin:1.5mm 0}
+        .qr{width:92mm;height:92mm;object-fit:contain;margin:8mm 0 6mm}
+        .amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}
+        .bank{font-size:17px;margin:1.5mm 0}
+        .content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
+      </style></head><body>\${sortedGroups.map((group: any, index: number) => \`<section class="page">
+        <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
+        <div class="group">Nhóm lớp: \${escape(group.className)}</div>
+        <h1 class="title">QR THANH TOÁN KHOẢN THU</h1>
+        <div class="serial">Số thứ tự: \${index + 1}</div>
+        <div class="student">\${escape(group.fullName)}</div>
+        <div class="meta">Mã học sinh: <strong>\${escape(group.studentCode)}</strong></div>
+        <div class="meta">Lớp: <strong>\${escape(group.className)}</strong></div>
+        <div class="meta">\${escape(group.feeNames.join(', '))}</div>
+        <img class="qr" src="\${escape(group.qrUrl)}" alt="Mã QR thanh toán">
+        <div class="amount">\${escape(formatCurrency(group.amount))}</div>
+        <div class="bank">\${escape(group.bankName)} – STK: <strong>\${escape(group.accountNo)}</strong></div>
+        <div class="bank">Tên tài khoản: <strong>\${escape(group.accountName)}</strong></div>
+        <div class="content">Nội dung chuyển khoản:<br><strong>\${escape(group.description)}</strong></div>
+      </section>\`).join('')}</body></html>\`;
+
+      const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = \`QR-thu-tien-\${className.replace(/[^a-zA-Z0-9À-ỹ_-]+/g, '-')}.doc\`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success('Đã tải tệp Word QR (mở bằng Microsoft Word)');
+    } catch (error: any) {
+      toast.error(error?.message ?? 'Không thể xuất Word QR');
+    } finally {
+      setProcessingQr(false);
+    }
+  };
+
   const sendBulkQr = async () => {
     if (!confirm('Gửi thông báo thanh toán và đường dẫn QR cho tất cả học sinh chưa đóng theo bộ lọc hiện tại?')) return;
     setProcessingQr(true);
@@ -183,7 +249,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
           <p className="text-sm text-muted-foreground">{total} khoản thu đã gán</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {!isTeacher && <Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Xuất PDF QR theo lớp</Button>}
+          {!isTeacher && <><Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Xuất PDF QR theo lớp</Button><Button variant="outline" disabled={processingQr} onClick={exportBulkWord}><FileText className="h-4 w-4 mr-1" /> Xuất Word QR</Button></>}
           <Button variant="outline" disabled={processingQr} onClick={sendBulkQr}><Send className="h-4 w-4 mr-1" /> Gửi QR cho học sinh</Button>
           {!isTeacher && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Gán khoản thu</Button></DialogTrigger>
