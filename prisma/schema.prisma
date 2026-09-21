@@ -51,11 +51,13 @@ model Student {
   passwordIsDefault Boolean       @default(true)
   zaloPhone      String?
   createdAt      DateTime        @default(now())
+  deletedAt      DateTime?
   feeAssignments FeeAssignment[]
   notifications  Notification[]
 
   @@index([classId])
   @@index([phone])
+  @@index([deletedAt])
   @@map("students")
 }
 
