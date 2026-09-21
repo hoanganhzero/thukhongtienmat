@@ -76,6 +76,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const { id } = await params;
     await prisma.student.update({ where: { id }, data: { deletedAt: new Date() } });
     return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -87,9 +91,5 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể khôi phục học sinh' }, { status: 500 });
-  }
-}
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
   }
 }
