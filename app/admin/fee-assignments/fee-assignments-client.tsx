@@ -140,6 +140,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         </section>`).join('')}
       </body></html>`);
       popup.document.close();
+      popup.focus();
     } catch (error: any) {
       popup.close();
       toast.error(error?.message ?? 'Không thể tạo PDF QR');
