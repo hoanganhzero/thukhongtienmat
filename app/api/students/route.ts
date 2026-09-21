@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     // Sorting rule: class -> given name (last word) -> family name and middle name -> student code.
     const sortText = (value: string) => value.trim().normalize('NFC');
     const getGivenName = (value: string) => {
-      const words = sortText(value).split(/\\s+/).filter(Boolean);
+      const words = sortText(value).split(/\s+/).filter(Boolean);
       return words.at(-1) ?? '';
     };
     const compareVietnamese = (a: string, b: string) =>
