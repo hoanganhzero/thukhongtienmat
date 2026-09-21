@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2, Search, Upload, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseStudentRows } from '@/lib/student-import';
 import { formatDate } from '@/lib/date-format';
@@ -31,6 +31,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const [form, setForm] = useState({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' });
   const [allClasses, setAllClasses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [importing, setImporting] = useState(false);
   const [jsonImportOpen, setJsonImportOpen] = useState(false);
   const [jsonImport, setJsonImport] = useState('');
@@ -43,11 +44,12 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
 
   const loadStudents = useCallback(() => {
     const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (showDeleted) params.set('deleted', '1');
     if (filterClass !== 'all') params.set('classId', filterClass);
     else if (filterCampus !== 'all') params.set('campusId', filterCampus);
     if (search) params.set('search', search);
     fetch(`/api/students?${params}`).then(r => r.json()).then(d => { setStudents(d?.students ?? []); setTotal(d?.total ?? 0); setSelectedIds([]); });
-  }, [page, filterClass, filterCampus, search]);
+  }, [page, filterClass, filterCampus, search, showDeleted]);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 
@@ -142,7 +144,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
 
   const deleteSelected = async () => {
     if (!selectedIds.length) return;
-    if (!confirm(`Xóa ${selectedIds.length} học sinh đã chọn? Các khoản thu, biên lai và thông báo liên quan cũng sẽ bị xóa.`)) return;
+    if (!confirm(`Đưa ${selectedIds.length} học sinh vào thùng rác? Dữ liệu khoản thu và lịch sử thanh toán sẽ được giữ lại.`)) return;
     const res = await fetch('/api/students/bulk', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -150,7 +152,21 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa học sinh');
-    toast.success(`Đã xóa ${data.deleted} học sinh`);
+    toast.success(`Đã đưa ${data.deleted} học sinh vào thùng rác`);
+    setSelectedIds([]);
+    loadStudents();
+  };
+
+  const restoreSelected = async () => {
+    if (!selectedIds.length) return;
+    const res = await fetch('/api/students/bulk', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(data?.error ?? 'Không thể khôi phục học sinh');
+    toast.success(`Đã khôi phục ${data.restored ?? 0} học sinh`);
     setSelectedIds([]);
     loadStudents();
   };
@@ -162,7 +178,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     <div className="p-6 max-w-[1200px] space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{isTeacher ? 'Học sinh lớp chủ nhiệm' : 'Quản lý Học sinh'}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{showDeleted ? 'Học sinh đã xóa' : (isTeacher ? 'Học sinh lớp chủ nhiệm' : 'Quản lý Học sinh')}</h1>
           <p className="text-sm text-muted-foreground">Tổng cộng {total} học sinh</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -175,7 +191,10 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
             <Textarea id="student-json-import" placeholder="Dữ liệu JSON dạng mảng, dùng cùng cột của tệp Excel" value={jsonImport} onChange={(event) => setJsonImport(event.target.value)} className="min-h-28 font-mono text-xs" />
             <Button disabled={importing || !jsonImport.trim()} onClick={handleImportJson}>{importing ? 'Đang nhập...' : 'Nhập dữ liệu JSON'}</Button>
           </div>}
-          {selectedIds.length > 0 && <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>}
+          {selectedIds.length > 0 && (showDeleted
+            ? <Button variant="outline" onClick={restoreSelected}><RotateCcw className="h-4 w-4 mr-1" /> Khôi phục đã chọn ({selectedIds.length})</Button>
+            : <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>)}
+          {!isTeacher && <Button variant="outline" onClick={() => { setShowDeleted((value) => !value); setPage(1); setSelectedIds([]); }}>{showDeleted ? 'Danh sách đang dùng' : 'Học sinh đã xóa'}</Button>}
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' }); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm học sinh</Button></DialogTrigger>
           <DialogContent>
@@ -245,11 +264,12 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
                   <TableCell className="text-sm text-muted-foreground">{s?.class?.campus?.name}</TableCell>
                   <TableCell className="text-sm">{s?.phone}</TableCell>
                   <TableCell>
-                    {!isTeacher &&
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, cccd: s.cccd ?? '', fullName: s.fullName, classId: s.classId, phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '', password: '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Xóa?')) return; await fetch(`/api/students/${s.id}`, { method: 'DELETE' }); loadStudents(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
+                    {!isTeacher && (showDeleted
+                      ? <Button variant="outline" size="sm" onClick={async () => { await fetch(`/api/students/${s.id}`, { method: 'PATCH' }); loadStudents(); }}><RotateCcw className="h-4 w-4 mr-1" /> Khôi phục</Button>
+                      : <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, cccd: s.cccd ?? '', fullName: s.fullName, classId: s.classId, phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '', password: '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Đưa học sinh vào thùng rác?')) return; await fetch(`/api/students/${s.id}`, { method: 'DELETE' }); loadStudents(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>)
                     }
                   </TableCell>
                 </TableRow>
