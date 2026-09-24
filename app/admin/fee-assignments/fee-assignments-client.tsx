@@ -8,11 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/status-badge';
-import { Plus, Printer, Send, Settings2, FileText } from 'lucide-react';
+import { Plus, Printer, Send, Settings2, FileText, Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import { parseDateInput } from '@/lib/date-format';
+import { formatDate, parseDateInput } from '@/lib/date-format';
 
 export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?: string; teacherClassId?: string }) {
   const isTeacher = adminRole === 'teacher';
@@ -31,6 +32,9 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   const [bhytEditing, setBhytEditing] = useState<any>(null);
   const [bhytForm, setBhytForm] = useState({ bhytCategory: 'student', bhytMonths: '12', bhytNote: '', amount: '' });
   const [assignForm, setAssignForm] = useState({ feeTypeId: '', campusId: '', classId: '', amount: '', dueDate: '', academicYear: '2025-2026' });
+  const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
+  const [assignmentEditing, setAssignmentEditing] = useState<any>(null);
+  const [assignmentForm, setAssignmentForm] = useState({ amount: '', status: 'pending', dueDate: '' });
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
@@ -44,10 +48,37 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
     if (filterClass !== 'all') params.set('classId', filterClass);
-    fetch(`/api/fee-assignments?${params}`).then(r => r.json()).then(d => { setAssignments(d?.assignments ?? []); setTotal(d?.total ?? 0); });
+    fetch(`/api/fee-assignments?${params}`).then(r => r.json()).then(d => { setAssignments(d?.assignments ?? []); setTotal(d?.total ?? 0); setSelectedAssignmentIds([]); });
   }, [page, filterStatus, filterFeeType, filterCampus, filterClass]);
 
   useEffect(() => { loadAssignments(); }, [loadAssignments]);
+
+  const saveAssignment = async () => {
+    if (!assignmentEditing) return;
+    const payload: any = { amount: Number(assignmentForm.amount), status: assignmentForm.status };
+    if (!Number.isFinite(payload.amount) || payload.amount < 0) return toast.error('Số tiền không hợp lệ');
+    if (assignmentForm.dueDate) {
+      const dueDate = parseDateInput(assignmentForm.dueDate);
+      if (!dueDate) return toast.error('Hạn đóng phải theo dd/mm/yyyy');
+      payload.dueDate = dueDate;
+    } else payload.dueDate = null;
+    const res = await fetch(`/api/fee-assignments/${assignmentEditing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(data?.error ?? 'Không thể cập nhật khoản thu');
+    toast.success('Đã cập nhật khoản thu');
+    setAssignmentEditing(null);
+    loadAssignments();
+  };
+
+  const deleteSelectedAssignments = async () => {
+    if (!selectedAssignmentIds.length) return;
+    if (!confirm(`Xóa ${selectedAssignmentIds.length} khoản thu đã chọn? Khoản đã xác nhận thanh toán sẽ được bảo vệ.`)) return;
+    const res = await fetch('/api/fee-assignments/bulk', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: selectedAssignmentIds }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa khoản thu');
+    toast.success(`Đã xóa ${data.deleted ?? 0} khoản thu`);
+    loadAssignments();
+  };
 
   const handleAssign = async () => {
     const body: any = { feeTypeId: assignForm.feeTypeId, academicYear: assignForm.academicYear };
@@ -251,6 +282,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         </div>
         <div className="flex flex-wrap gap-2">
           {!isTeacher && <><Button variant="outline" disabled={processingQr} onClick={printBulkQr}><Printer className="h-4 w-4 mr-1" /> Xuất PDF QR theo lớp</Button><Button variant="outline" disabled={processingQr} onClick={exportBulkWord}><FileText className="h-4 w-4 mr-1" /> Xuất Word QR</Button></>}
+          {!isTeacher && selectedAssignmentIds.length > 0 && <Button variant="destructive" onClick={deleteSelectedAssignments}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedAssignmentIds.length})</Button>}
           <Button variant="outline" disabled={processingQr} onClick={sendBulkQr}><Send className="h-4 w-4 mr-1" /> Gửi QR cho học sinh</Button>
           {!isTeacher && <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Gán khoản thu</Button></DialogTrigger>
@@ -314,6 +346,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"><Checkbox aria-label="Chọn tất cả khoản thu trên trang" checked={assignments.length > 0 && assignments.every((item: any) => selectedAssignmentIds.includes(item.id))} onCheckedChange={(checked) => setSelectedAssignmentIds(checked ? assignments.map((item: any) => item.id) : [])} /></TableHead>
                 <TableHead>Mã HS</TableHead>
                 <TableHead>Họ tên</TableHead>
                 <TableHead>Lớp</TableHead>
@@ -326,19 +359,30 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
             <TableBody>
               {assignments.map((a: any) => (
                 <TableRow key={a?.id}>
+                  <TableCell><Checkbox aria-label={`Chọn khoản thu của ${a?.student?.fullName}`} checked={selectedAssignmentIds.includes(a?.id)} onCheckedChange={(checked) => setSelectedAssignmentIds((current) => checked ? [...new Set([...current, a.id])] : current.filter((id) => id !== a.id))} /></TableCell>
                   <TableCell className="font-mono text-sm">{a?.student?.studentCode}</TableCell>
                   <TableCell className="font-medium">{a?.student?.fullName}</TableCell>
                   <TableCell>{a?.student?.class?.name}</TableCell>
                   <TableCell>{a?.feeType?.name}</TableCell>
                   <TableCell className="font-mono">{formatCurrency(a?.amount ?? 0)}</TableCell>
                   <TableCell><StatusBadge status={a?.status ?? 'pending'} /></TableCell>
-                  <TableCell>{!isTeacher && a?.feeType?.name?.toUpperCase().includes('BHYT') && <Button variant="ghost" size="sm" onClick={() => { setBhytEditing(a); setBhytForm({ bhytCategory: a.bhytCategory ?? 'student', bhytMonths: String(a.bhytMonths ?? 12), bhytNote: a.bhytNote ?? '', amount: String(a.amount ?? 0) }); }}><Settings2 className="mr-1 h-4 w-4" /> Trường hợp đặc biệt</Button>}</TableCell>
+                  <TableCell>{!isTeacher && <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" title="Chỉnh sửa" onClick={() => { setAssignmentEditing(a); setAssignmentForm({ amount: String(a.amount ?? 0), status: a.status ?? 'pending', dueDate: a.dueDate ? formatDate(a.dueDate) : '' }); }}><Pencil className="h-4 w-4" /></Button>
+                    {a?.feeType?.name?.toUpperCase().includes('BHYT') && <Button variant="ghost" size="sm" onClick={() => { setBhytEditing(a); setBhytForm({ bhytCategory: a.bhytCategory ?? 'student', bhytMonths: String(a.bhytMonths ?? 12), bhytNote: a.bhytNote ?? '', amount: String(a.amount ?? 0) }); }}><Settings2 className="mr-1 h-4 w-4" /> BHYT</Button>}
+                  </div>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!assignmentEditing} onOpenChange={(value) => { if (!value) setAssignmentEditing(null); }}><DialogContent><DialogHeader><DialogTitle>Chỉnh sửa khoản thu – {assignmentEditing?.student?.fullName}</DialogTitle></DialogHeader><div className="space-y-4">
+        <div><Label>Số tiền</Label><Input type="number" min="0" className="mt-1" value={assignmentForm.amount} onChange={(e) => setAssignmentForm({ ...assignmentForm, amount: e.target.value })} /></div>
+        <div><Label>Hạn đóng (dd/mm/yyyy)</Label><Input className="mt-1" placeholder="dd/mm/yyyy" value={assignmentForm.dueDate} onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })} /></div>
+        <div><Label>Trạng thái</Label><Select value={assignmentForm.status} onValueChange={(value) => setAssignmentForm({ ...assignmentForm, status: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pending">Chưa đóng</SelectItem><SelectItem value="uploaded">Đã gửi ảnh</SelectItem><SelectItem value="confirmed">Đã xác nhận</SelectItem><SelectItem value="rejected">Bị từ chối</SelectItem><SelectItem value="exempt">Không phải đóng</SelectItem></SelectContent></Select></div>
+        <Button className="w-full" onClick={saveAssignment}>Lưu thay đổi</Button>
+      </div></DialogContent></Dialog>
 
       <Dialog open={!!bhytEditing} onOpenChange={(value) => { if (!value) setBhytEditing(null); }}><DialogContent><DialogHeader><DialogTitle>Cấu hình BHYT – {bhytEditing?.student?.fullName}</DialogTitle></DialogHeader><div className="space-y-4">
         <div><Label>Trường hợp tham gia</Label><Select value={bhytForm.bhytCategory} onValueChange={(value) => setBhytForm({ ...bhytForm, bhytCategory: value })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="student">Thông thường – dùng mức thu chung</SelectItem><SelectItem value="student_custom">Đóng tại trường theo số tháng riêng</SelectItem><SelectItem value="household">Đã mua BHYT hộ gia đình</SelectItem><SelectItem value="near_poor">Hộ cận nghèo đã được cấp BHYT</SelectItem><SelectItem value="poor">Hộ nghèo đã được cấp BHYT</SelectItem><SelectItem value="commune_free">Thuộc xã/phường được cấp miễn phí</SelectItem><SelectItem value="other">Diện khác đã có BHYT</SelectItem></SelectContent></Select></div>
