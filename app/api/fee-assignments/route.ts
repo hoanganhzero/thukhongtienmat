@@ -31,20 +31,28 @@ export async function GET(request: Request) {
     } else if (classId) where.student = { classId };
     if (user.adminRole !== 'teacher' && campusId) where.student = { ...(where.student ?? {}), class: { campusId } };
 
-    const [assignments, total] = await Promise.all([
-      prisma.feeAssignment.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          student: { include: { class: { include: { campus: true } } } },
-          feeType: true,
-          paymentProofs: true,
-        },
-      }),
-      prisma.feeAssignment.count({ where }),
-    ]);
+    const allAssignments = await prisma.feeAssignment.findMany({
+      where,
+      include: {
+        student: { include: { class: { include: { campus: true } } } },
+        feeType: true,
+        paymentProofs: true,
+      },
+    });
+    const sortText = (value: string) => value.trim().normalize('NFC');
+    const givenName = (value: string) => sortText(value).split(/\s+/).at(-1) ?? '';
+    const compare = (a: string, b: string) => a.localeCompare(b, 'vi', { sensitivity: 'base', numeric: true });
+    allAssignments.sort((a, b) => {
+      const classCompare = compare(a.student?.class?.name ?? '', b.student?.class?.name ?? '');
+      if (classCompare !== 0) return classCompare;
+      const nameCompare = compare(givenName(a.student?.fullName ?? ''), givenName(b.student?.fullName ?? ''));
+      if (nameCompare !== 0) return nameCompare;
+      const fullNameCompare = compare(sortText(a.student?.fullName ?? ''), sortText(b.student?.fullName ?? ''));
+      if (fullNameCompare !== 0) return fullNameCompare;
+      return compare(a.student?.studentCode ?? '', b.student?.studentCode ?? '');
+    });
+    const total = allAssignments.length;
+    const assignments = allAssignments.slice((page - 1) * limit, page * limit);
 
     return NextResponse.json({ assignments, total, page, limit });
   } catch (error: any) {
