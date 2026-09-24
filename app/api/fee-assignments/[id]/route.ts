@@ -43,6 +43,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       if (!Number.isFinite(amount) || amount < 0) return NextResponse.json({ error: 'Số tiền không hợp lệ' }, { status: 400 });
       updateData.amount = amount;
     }
+    if (Object.prototype.hasOwnProperty.call(data, 'dueDate')) {
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      if (updateData.dueDate && Number.isNaN(updateData.dueDate.getTime())) return NextResponse.json({ error: 'Hạn đóng không hợp lệ' }, { status: 400 });
+    }
     if (data.bhytCategory !== undefined) {
       if (!bhytCategories.includes(data.bhytCategory)) return NextResponse.json({ error: 'Diện BHYT không hợp lệ' }, { status: 400 });
       updateData.bhytCategory = data.bhytCategory;
