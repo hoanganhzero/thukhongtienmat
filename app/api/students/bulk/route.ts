@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { refreshStudentQrContent } from '@/lib/student-qr-sync';
 
 async function isAdmin() {
   const user = (await auth())?.user as any;
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
           ...(cccds.length ? [{ cccd: { in: cccds } }] : []),
         ],
       },
-      select: { studentCode: true, cccd: true, classId: true },
+      select: { id: true, studentCode: true, cccd: true, classId: true },
     });
     const existingByCode = new Map(existing.map((student) => [student.studentCode, student]));
     const existingByCccd = new Map(existing.filter((student) => student.cccd).map((student) => [student.cccd as string, student]));
@@ -98,6 +99,12 @@ export async function POST(request: Request) {
         },
       });
     }));
+
+    const studentsWithFees = await prisma.student.findMany({
+      where: { studentCode: { in: codes }, feeAssignments: { some: {} } },
+      select: { id: true },
+    });
+    await Promise.all(studentsWithFees.map((student) => refreshStudentQrContent(student.id)));
 
     return NextResponse.json({ imported: rowsToImport.length, skipped });
   } catch (error: any) {
