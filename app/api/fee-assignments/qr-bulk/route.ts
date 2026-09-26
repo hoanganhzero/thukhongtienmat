@@ -15,8 +15,12 @@ async function getGroups(request: Request, user: any) {
     const classIds = teacherClassIds(user);
     if (!classIds.length) throw new Error('Tài khoản chưa được phân công lớp');
     where.student = { classId: { in: classIds } };
-  } else if (searchParams.get('classId')) where.student = { classId: searchParams.get('classId') };
-  if (user.adminRole !== 'teacher' && searchParams.get('campusId')) where.student = { class: { campusId: searchParams.get('campusId') } };
+  } else {
+    const studentFilter: any = {};
+    if (searchParams.get('classId')) studentFilter.classId = searchParams.get('classId');
+    if (user.adminRole !== 'teacher' && searchParams.get('campusId')) studentFilter.class = { campusId: searchParams.get('campusId') };
+    if (Object.keys(studentFilter).length) where.student = studentFilter;
+  }
 
   const assignments = await prisma.feeAssignment.findMany({
     where,
