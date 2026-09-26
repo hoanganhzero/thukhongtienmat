@@ -33,6 +33,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   const [bhytForm, setBhytForm] = useState({ bhytCategory: 'student', bhytMonths: '12', bhytNote: '', amount: '' });
   const [assignForm, setAssignForm] = useState({ feeTypeId: '', campusId: '', classId: '', amount: '', dueDate: '', academicYear: '2025-2026' });
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
+  const [qrClassGroups, setQrClassGroups] = useState<Record<string, any[]> | null>(null);
   const [assignmentEditing, setAssignmentEditing] = useState<any>(null);
   const [assignmentForm, setAssignmentForm] = useState({ amount: '', status: 'pending', dueDate: '' });
 
@@ -114,10 +115,32 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     return 'toàn trường';
   };
 
-  const printBulkQr = async () => {
+  const printClassQr = (className: string, selectedGroups: any[]) => {
     const popup = window.open('', '_blank');
     if (!popup) return toast.error('Trình duyệt đang chặn cửa sổ in');
-    popup.document.write('<p style="font-family:Arial;padding:24px">Đang tạo PDF mã QR...</p>');
+    const escape = (value: unknown) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char]!);
+    const ordered = [...selectedGroups].sort((a: any, b: any) => String(a?.fullName ?? '').localeCompare(String(b?.fullName ?? ''), 'vi', { sensitivity: 'base' }));
+    popup.document.open();
+    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tiền - ${escape(className)}</title><style>
+      @page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}html,body{margin:0;padding:0;color:#111;font-family:Arial,sans-serif}
+      .toolbar{padding:12px 0 18px;text-align:center}.toolbar button{background:#116b46;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}.toolbar p{margin:8px 0 0;color:#555;font-size:13px}
+      .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}.page:last-child{page-break-after:auto;break-after:auto}
+      .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}.group{font-size:18px;font-weight:700;color:#116b46;border-bottom:2px solid #116b46;padding-bottom:2mm;margin-bottom:4mm}.title{font-size:24px;font-weight:700;margin:0 0 4mm}.student{font-size:21px;font-weight:700;margin:2mm 0}.serial{font-size:17px;font-weight:700;margin:1mm 0}.meta{font-size:17px;margin:1.5mm 0}.qr{width:92mm;height:92mm;object-fit:contain;margin:8mm 0 6mm}.amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}.bank{font-size:17px;margin:1.5mm 0}.content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}.hint{font-size:13px;color:#555;margin-top:6mm}@media print{.toolbar{display:none}.page{min-height:273mm}}
+    </style></head><body onload="setTimeout(() => window.print(), 500)">
+      <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button><p>Đây là tệp riêng của lớp <strong>${escape(className)}</strong>. Chọn <strong>Lưu dưới dạng PDF</strong>.</p></div>
+      ${ordered.map((group: any, index: number) => `<section class="page">
+        <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div><div class="group">Nhóm lớp: ${escape(group.className)}</div>
+        <h1 class="title">QR THANH TOÁN KHOẢN THU</h1><div class="serial">Số thứ tự: ${index + 1}</div><div class="student">${escape(group.fullName)}</div>
+        <div class="meta">Mã học sinh: <strong>${escape(group.studentCode)}</strong></div><div class="meta">Lớp: <strong>${escape(group.className)}</strong></div><div class="meta">${escape(group.feeNames.join(', '))}</div>
+        <img class="qr" src="${escape(group.qrUrl)}" alt="Mã QR thanh toán"><div class="amount">${escape(formatCurrency(group.amount))}</div>
+        <div class="bank">${escape(group.bankName)} – STK: <strong>${escape(group.accountNo)}</strong></div><div class="bank">Tên tài khoản: <strong>${escape(group.accountName)}</strong></div>
+        <div class="content">Nội dung chuyển khoản:<br><strong>${escape(group.description)}</strong></div><div class="hint">Chỉ quét mã QR đúng trang của học sinh này.</div>
+      </section>`).join('')}
+    </body></html>`);
+    popup.document.close(); popup.focus();
+  };
+
+  const printBulkQr = async () => {
     setProcessingQr(true);
     try {
       const params = new URLSearchParams(qrFilters());
@@ -125,63 +148,18 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
       const groups = await res.json();
       if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
       if (!Array.isArray(groups) || !groups.length) throw new Error('Phạm vi đã chọn chưa có khoản thu để tạo QR');
-      const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
-      const sortedGroups = [...groups].sort((a: any, b: any) => {
-        const classCompare = String(a?.className ?? '').localeCompare(String(b?.className ?? ''), 'vi', { numeric: true, sensitivity: 'base' });
-        if (classCompare !== 0) return classCompare;
-        return String(a?.fullName ?? '').localeCompare(String(b?.fullName ?? ''), 'vi', { sensitivity: 'base' });
-      });
-      const scopeName = exportScopeLabel();
-      popup.document.open();
-      popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>QR thu tiền - ${escape(scopeName)}</title><style>
-        @page{size:A4 portrait;margin:12mm}
-        *{box-sizing:border-box}
-        html,body{margin:0;padding:0;color:#111;font-family:Arial,sans-serif}
-        .toolbar{padding:12px 0 18px;text-align:center}
-        .toolbar button{background:#116b46;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}.toolbar p{margin:8px 0 0;color:#555;font-size:13px}
-        .page{min-height:273mm;display:flex;flex-direction:column;align-items:center;text-align:center;page-break-after:always;break-after:page;padding:4mm 5mm}
-        .page:last-child{page-break-after:auto;break-after:auto}
-        .school{font-size:15px;font-weight:700;color:#116b46;margin-bottom:5mm}
-        .group{font-size:18px;font-weight:700;color:#116b46;border-bottom:2px solid #116b46;padding-bottom:2mm;margin-bottom:4mm}
-        .title{font-size:24px;font-weight:700;margin:0 0 4mm}
-        .student{font-size:21px;font-weight:700;margin:2mm 0}
-        .serial{font-size:17px;font-weight:700;margin:1mm 0}
-        .meta{font-size:17px;margin:1.5mm 0}
-        .qr{width:92mm;height:92mm;object-fit:contain;margin:8mm 0 6mm}
-        .amount{font-size:24px;font-weight:700;color:#067647;margin:2mm 0}
-        .bank{font-size:17px;margin:1.5mm 0}
-        .content{max-width:170mm;border:1px dashed #888;border-radius:8px;padding:4mm 6mm;margin-top:5mm;font-size:16px;line-height:1.45;overflow-wrap:anywhere}
-        .hint{font-size:13px;color:#555;margin-top:6mm}
-        @media print{.toolbar{display:none}.page{min-height:273mm}}
-      </style></head><body onload="setTimeout(() => window.print(), 500)">
-        <div class="toolbar"><button onclick="window.print()">In / Lưu thành PDF</button><p>Trong hộp thoại in, chọn máy in <strong>Lưu dưới dạng PDF</strong> để tải tệp PDF về máy.</p></div>
-        ${sortedGroups.map((group: any, index: number) => `<section class="page">
-          <div class="school">TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH</div>
-          <div class="group">Nhóm lớp: ${escape(group.className)}</div>
-          <h1 class="title">QR THANH TOÁN KHOẢN THU</h1>
-          <div class="serial">Số thứ tự: ${index + 1}</div>
-          <div class="student">${escape(group.fullName)}</div>
-          <div class="meta">Mã học sinh: <strong>${escape(group.studentCode)}</strong></div>
-          <div class="meta">Lớp: <strong>${escape(group.className)}</strong></div>
-          <div class="meta">${escape(group.feeNames.join(', '))}</div>
-          <img class="qr" src="${escape(group.qrUrl)}" alt="Mã QR thanh toán">
-          <div class="amount">${escape(formatCurrency(group.amount))}</div>
-          <div class="bank">${escape(group.bankName)} – STK: <strong>${escape(group.accountNo)}</strong></div>
-          <div class="bank">Tên tài khoản: <strong>${escape(group.accountName)}</strong></div>
-          <div class="content">Nội dung chuyển khoản:<br><strong>${escape(group.description)}</strong></div>
-          <div class="hint">Chỉ quét mã QR trên đúng trang của học sinh này. Kiểm tra lại họ tên, lớp và số tiền trước khi chuyển.</div>
-        </section>`).join('')}
-      </body></html>`);
-      popup.document.close();
-      popup.focus();
+      const classGroups = groups.reduce((result: Record<string, any[]>, group: any) => {
+        const key = String(group?.className ?? 'Không xác định');
+        (result[key] ??= []).push(group);
+        return result;
+      }, {});
+      setQrClassGroups(classGroups);
     } catch (error: any) {
-      popup.close();
       toast.error(error?.message ?? 'Không thể tạo PDF QR');
     } finally {
       setProcessingQr(false);
     }
   };
-
   const exportBulkWord = async () => {
     setProcessingQr(true);
     try {
@@ -374,6 +352,8 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!qrClassGroups} onOpenChange={(value) => { if (!value) setQrClassGroups(null); }}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Xuất PDF QR theo từng lớp</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Phạm vi đã chọn có {Object.keys(qrClassGroups ?? {}).length} lớp. Mỗi nút sẽ tạo một tệp PDF riêng cho lớp đó.</p><div className="max-h-[55vh] space-y-2 overflow-y-auto">{Object.entries(qrClassGroups ?? {}).sort(([a], [b]) => a.localeCompare(b, 'vi', { numeric: true, sensitivity: 'base' })).map(([className, groups]) => <div key={className} className="flex items-center justify-between rounded-lg border p-3"><div><p className="font-medium">Lớp {className}</p><p className="text-xs text-muted-foreground">{groups.length} học sinh</p></div><Button onClick={() => printClassQr(className, groups)}>Xuất PDF</Button></div>)}</div></DialogContent></Dialog>
 
       <Dialog open={!!assignmentEditing} onOpenChange={(value) => { if (!value) setAssignmentEditing(null); }}><DialogContent><DialogHeader><DialogTitle>Chỉnh sửa khoản thu – {assignmentEditing?.student?.fullName}</DialogTitle></DialogHeader><div className="space-y-4">
         <div><Label>Số tiền</Label><Input type="number" min="0" className="mt-1" value={assignmentForm.amount} onChange={(e) => setAssignmentForm({ ...assignmentForm, amount: e.target.value })} /></div>
