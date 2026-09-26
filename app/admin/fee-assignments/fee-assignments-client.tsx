@@ -32,6 +32,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   const [bhytEditing, setBhytEditing] = useState<any>(null);
   const [bhytForm, setBhytForm] = useState({ bhytCategory: 'student', bhytMonths: '12', bhytNote: '', amount: '' });
   const [assignForm, setAssignForm] = useState({ feeTypeId: '', campusId: '', classId: '', amount: '', dueDate: '', academicYear: '2025-2026' });
+  const [assignProgress, setAssignProgress] = useState<{ total: number; completed: number } | null>(null);
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
   const [qrClassGroups, setQrClassGroups] = useState<Record<string, any[]> | null>(null);
   const [assignmentEditing, setAssignmentEditing] = useState<any>(null);
@@ -93,10 +94,29 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     else if (assignForm.campusId) body.campusId = assignForm.campusId;
     else { toast?.error?.('Vui lòng chọn cơ sở hoặc lớp'); return; }
 
-    const res = await fetch('/api/fee-assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await res.json();
-    if (res.ok) { toast?.success?.(`Đã gán cho ${data?.created ?? 0} học sinh`); setOpen(false); loadAssignments(); }
-    else toast?.error?.(data?.error ?? 'Lỗi');
+    const countParams = new URLSearchParams({ page: '1', limit: '1' });
+    if (body.classId) countParams.set('classId', body.classId);
+    if (body.campusId) countParams.set('campusId', body.campusId);
+    setAssignProgress({ total: 0, completed: 0 });
+    try {
+      const countResponse = await fetch(`/api/students?${countParams}`);
+      const countData = await countResponse.json().catch(() => ({}));
+      setAssignProgress({ total: Number(countData?.total ?? 0), completed: 0 });
+
+      const res = await fetch('/api/fee-assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast?.error?.(data?.error ?? 'Lỗi');
+        return;
+      }
+      const completed = Number(data?.created ?? 0);
+      setAssignProgress({ total: Number(countData?.total ?? completed), completed });
+      toast?.success?.(`Đã hoàn thành: ${completed}/${Number(countData?.total ?? completed)} học sinh`);
+      setOpen(false);
+      loadAssignments();
+    } finally {
+      setTimeout(() => setAssignProgress(null), 1200);
+    }
   };
 
   const filteredClasses = assignForm.campusId
@@ -288,7 +308,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
               </div>
               <div><Label>Số tiền áp dụng</Label><Input type="number" min="0" value={assignForm.amount} onChange={e => setAssignForm({ ...assignForm, amount: e.target.value })} className="mt-1" placeholder="Để trống để dùng mức mặc định của khoản thu" /><p className="mt-1 text-xs text-muted-foreground">Hệ thống tự áp mức đã cấu hình cho toàn bộ học sinh trong lớp hoặc cơ sở.</p></div>
               <div><Label htmlFor="due-date">Hạn đóng (dd/mm/yyyy)</Label><Input id="due-date" type="text" placeholder="dd/mm/yyyy" maxLength={10} value={assignForm.dueDate} onChange={e => setAssignForm({ ...assignForm, dueDate: e.target.value })} className="mt-1" /></div>
-              <Button onClick={handleAssign} className="w-full">Gán khoản thu</Button>
+              <Button onClick={handleAssign} disabled={!!assignProgress} className="w-full">{assignProgress ? `Đang xử lý ${assignProgress.completed}/${assignProgress.total || '...'} học sinh...` : 'Gán khoản thu'}</Button>{assignProgress && <p className="text-center text-sm text-muted-foreground">Hệ thống đang gán/cập nhật khoản thu, vui lòng không đóng cửa sổ.</p>}
             </div>
           </DialogContent>
           </Dialog>}
