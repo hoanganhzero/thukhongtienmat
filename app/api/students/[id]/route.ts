@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import bcrypt from 'bcryptjs';
+import { refreshStudentQrContent } from '@/lib/student-qr-sync';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -49,6 +50,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const data = await request.json();
     const newPassword = String(data.password ?? '').trim();
+    const before = await prisma.student.findUnique({ where: { id }, select: { classId: true, fullName: true } });
+    if (!before) return NextResponse.json({ error: 'Không tìm thấy học sinh' }, { status: 404 });
     const student = await prisma.student.update({
       where: { id },
       data: {
@@ -62,6 +65,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10), passwordIsDefault: false } : {}),
       },
     });
+    if (before.classId !== student.classId || before.fullName !== student.fullName) {
+      await refreshStudentQrContent(student.id);
+    }
     return NextResponse.json(student);
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Lỗi' }, { status: 500 });
