@@ -16,7 +16,7 @@ export function FeeTypesClient() {
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'VietinBank', isActive: true });
+  const [form, setForm] = useState({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'MB Bank', isActive: true });
 
   const load = () => fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
   useEffect(() => { load(); }, []);
@@ -33,7 +33,7 @@ export function FeeTypesClient() {
   const resetForm = () => setForm({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'VietinBank', isActive: true });
 
   const configureBht = async () => {
-    if (!confirm('Cấu hình BHTT dùng VietinBank 108869921106 và xóa các khoản thu khác? Khoản đã xác nhận thanh toán sẽ được giữ lại và ngưng hoạt động.')) return;
+    if (!confirm('Cấu hình BHTT dùng MB Bank 0335127226 và xóa các khoản thu khác? Khoản đã xác nhận thanh toán sẽ được giữ lại và ngưng hoạt động.')) return;
     const res = await fetch('/api/fee-types/cleanup-bht', { method: 'POST' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return toast.error(data?.error ?? 'Không thể cấu hình BHTT');
@@ -88,7 +88,7 @@ export function FeeTypesClient() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(ft); setForm({ name: ft.name, description: ft.description ?? '', amount: ft.amount, bankAccountNumber: ft.bankAccountNumber ?? '', bankAccountName: ft.bankAccountName ?? '', bankName: ft.bankName ?? 'Agribank', isActive: ft.isActive }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => { setEditing(ft); setForm({ name: ft.name, description: ft.description ?? '', amount: ft.amount, bankAccountNumber: ft.bankAccountNumber ?? '', bankAccountName: ft.bankAccountName ?? '', bankName: ft.bankName ?? 'MB Bank', isActive: ft.isActive }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Xóa khoản thu này?')) return; const res = await fetch(`/api/fee-types/${ft.id}`, { method: 'DELETE' }); const data = await res.json().catch(() => ({})); if (!res.ok) return toast.error(data?.error ?? 'Không thể xóa'); toast.success('Đã xóa khoản thu'); load(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
