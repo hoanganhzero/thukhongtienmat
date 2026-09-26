@@ -16,7 +16,7 @@ export function FeeTypesClient() {
   const [feeTypes, setFeeTypes] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'Agribank', isActive: true });
+  const [form, setForm] = useState({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'VietinBank', isActive: true });
 
   const load = () => fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
   useEffect(() => { load(); }, []);
@@ -30,7 +30,16 @@ export function FeeTypesClient() {
     else toast?.error?.(data?.error ?? 'Không thể lưu khoản thu');
   };
 
-  const resetForm = () => setForm({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'Agribank', isActive: true });
+  const resetForm = () => setForm({ name: '', description: '', amount: 0, bankAccountNumber: '', bankAccountName: '', bankName: 'VietinBank', isActive: true });
+
+  const configureBht = async () => {
+    if (!confirm('Cấu hình BHTT dùng VietinBank 108869921106 và xóa các khoản thu khác? Khoản đã xác nhận thanh toán sẽ được giữ lại và ngưng hoạt động.')) return;
+    const res = await fetch('/api/fee-types/cleanup-bht', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return toast.error(data?.error ?? 'Không thể cấu hình BHTT');
+    toast.success(`Đã cấu hình BHTT. Xóa ${data.removed?.length ?? 0} khoản thu khác.`);
+    load();
+  };
 
   return (
     <div className="p-6 max-w-[1200px] space-y-6">
@@ -39,7 +48,9 @@ export function FeeTypesClient() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Cấu hình Khoản thu</h1>
           <p className="text-sm text-muted-foreground">Quản lý các loại khoản thu học phí</p>
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); resetForm(); } }}>
+        <div className="flex gap-2 flex-wrap justify-end">
+          <Button variant="outline" onClick={configureBht}>Cấu hình BHTT mặc định</Button>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); resetForm(); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm khoản thu</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>{editing ? 'Sửa khoản thu' : 'Thêm khoản thu'}</DialogTitle></DialogHeader>
@@ -57,7 +68,8 @@ export function FeeTypesClient() {
               <Button onClick={handleSave} className="w-full">Lưu</Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
