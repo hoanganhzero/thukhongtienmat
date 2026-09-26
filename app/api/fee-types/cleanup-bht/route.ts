@@ -5,9 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 
 const bank = {
-  bankName: 'VietinBank',
-  bankAccountNumber: '108869921106',
-  bankAccountName: 'TRAN QUOC HOANG ANH',
+  bankName: 'MB Bank',
+  bankAccountNumber: '0335127226',
+  bankAccountName: 'NGUYEN THI PHUONG THAO',
 };
 
 export async function POST() {
