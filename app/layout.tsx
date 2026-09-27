@@ -1,3 +1,4 @@
+import PwaRegister from "./pwa-register";
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -15,6 +16,8 @@ export const viewport: Viewport = {
 
 
 export const metadata: Metadata = {
+  applicationName: "Thu BHTT/BHYT",
+  manifest: "/manifest.webmanifest",
   title: 'Thu không tiền mặt | Trung tâm GDNN-GDTX Khu vực Tân Ninh',
   description: 'Tra cứu và thanh toán các khoản thu của Trung tâm GDNN-GDTX Khu vực Tân Ninh bằng chuyển khoản QR.',
   icons: {
@@ -35,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
       </head>
       <body className="font-sans antialiased">
+        <PwaRegister />
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <Providers>
             {children}
