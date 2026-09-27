@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo-trung-tam-tan-ninh.webp',
     shortcut: '/logo-trung-tam-tan-ninh.webp',
-  },
+   apple: "/icons/icon-192.png", },
   openGraph: {
     title: 'Thu không tiền mặt | Trung tâm GDNN-GDTX Khu vực Tân Ninh',
     description: 'Tra cứu và thanh toán các khoản thu bằng chuyển khoản QR.',
