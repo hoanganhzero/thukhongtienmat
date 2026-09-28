@@ -47,6 +47,7 @@ model Student {
   phone          String?
   parentPhone    String?
   dateOfBirth    DateTime?
+  gender         String?
   passwordHash   String
   passwordIsDefault Boolean       @default(true)
   zaloPhone      String?
