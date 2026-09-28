@@ -3,12 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
-
-const bank = {
-  bankName: 'MB Bank',
-  bankAccountNumber: '0335127226',
-  bankAccountName: 'NGUYEN THI PHUONG THAO',
-};
+import { DEFAULT_PAYMENT_ACCOUNT } from '@/lib/payment-account';
 
 export async function POST() {
   try {
@@ -20,13 +15,16 @@ export async function POST() {
     const feeTypes = await prisma.feeType.findMany({ include: { feeAssignments: { select: { id: true, status: true } } } });
     const bhtTypes = feeTypes.filter((feeType) => /BHTT?|BHT/i.test(feeType.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
     const primary = bhtTypes[0] ?? await prisma.feeType.create({
-      data: { name: 'BHTT', description: 'Bảo hiểm tai nạn', amount: 100000, ...bank, isActive: true },
+      data: { name: 'BHTT', description: 'Bảo hiểm tai nạn', amount: 100000, ...DEFAULT_PAYMENT_ACCOUNT, isActive: true },
       include: { feeAssignments: { select: { id: true, status: true } } },
     });
 
-    await prisma.feeType.update({ where: { id: primary.id }, data: { ...bank, isActive: true } });
+    await prisma.feeType.update({
+      where: { id: primary.id },
+      data: { name: 'BHTT', description: 'Bảo hiểm tai nạn', ...DEFAULT_PAYMENT_ACCOUNT, isActive: true },
+    });
     for (const feeType of bhtTypes.slice(1)) {
-      await prisma.feeType.update({ where: { id: feeType.id }, data: { ...bank, isActive: false } });
+      await prisma.feeType.update({ where: { id: feeType.id }, data: { ...DEFAULT_PAYMENT_ACCOUNT, isActive: false } });
     }
 
     const removed: string[] = [];
@@ -50,7 +48,7 @@ export async function POST() {
       removed.push(feeType.name);
     }
 
-    return NextResponse.json({ success: true, kept: primary.name, bank, removed, protectedTypes });
+    return NextResponse.json({ success: true, kept: primary.name, bank: DEFAULT_PAYMENT_ACCOUNT, removed, protectedTypes });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể cấu hình khoản BHT' }, { status: 500 });
   }
