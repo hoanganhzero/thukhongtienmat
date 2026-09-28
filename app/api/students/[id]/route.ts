@@ -21,6 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         phone: true,
         parentPhone: true,
         dateOfBirth: true,
+        gender: true,
         zaloPhone: true,
         class: { select: { id: true, name: true, campus: { select: { name: true } } } },
         feeAssignments: {
@@ -61,6 +62,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         phone: data.phone,
         parentPhone: data.parentPhone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+        gender: ['Nam', 'Nữ'].includes(String(data.gender ?? '').trim()) ? String(data.gender).trim() : undefined,
         zaloPhone: data.zaloPhone,
         ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 10), passwordIsDefault: false } : {}),
       },
