@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,12 @@ export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [teacherMode, setTeacherMode] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setTeacherMode(new URLSearchParams(window.location.search).get('role') === 'teacher');
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +33,7 @@ export default function AdminLoginPage() {
         toast?.error?.('Sai tài khoản hoặc mật khẩu');
       } else {
         // Full navigation so the server layout re-renders with the session (shows sidebar)
-        window.location.href = '/admin';
+        window.location.href = teacherMode ? '/admin/students' : '/admin';
       }
     } catch {
       toast?.error?.('Lỗi hệ thống');
@@ -44,8 +49,8 @@ export default function AdminLoginPage() {
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Shield className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Đăng nhập Cán bộ</h1>
-          <p className="text-sm text-muted-foreground mt-1">Quản trị viên & Thủ quỹ / Kế toán</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{teacherMode ? 'Đăng nhập GVCN' : 'Đăng nhập Cán bộ'}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{teacherMode ? 'Tra cứu và báo cáo tình hình đóng tiền của lớp chủ nhiệm' : 'Quản trị viên • Thủ quỹ/Kế toán • GVCN'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
