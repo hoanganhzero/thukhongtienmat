@@ -35,6 +35,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
   const [assignProgress, setAssignProgress] = useState<{ total: number; completed: number } | null>(null);
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
   const [qrClassGroups, setQrClassGroups] = useState<Record<string, any[]> | null>(null);
+  const [qrSummary, setQrSummary] = useState<any>(null);
   const [assignmentEditing, setAssignmentEditing] = useState<any>(null);
   const [assignmentForm, setAssignmentForm] = useState({ amount: '', status: 'pending', dueDate: '' });
 
@@ -165,8 +166,9 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     try {
       const params = new URLSearchParams(qrFilters());
       const res = await fetch(`/api/fee-assignments/qr-bulk?${params}`);
-      const groups = await res.json();
-      if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể tạo QR');
+      const groups = Array.isArray(data) ? data : data?.groups;
       if (!Array.isArray(groups) || !groups.length) throw new Error('Phạm vi đã chọn chưa có khoản thu để tạo QR');
       const classGroups = groups.reduce((result: Record<string, any[]>, group: any) => {
         const key = String(group?.className ?? 'Không xác định');
@@ -174,6 +176,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         return result;
       }, {});
       setQrClassGroups(classGroups);
+      setQrSummary(data?.summary ?? null);
     } catch (error: any) {
       toast.error(error?.message ?? 'Không thể tạo PDF QR');
     } finally {
@@ -185,8 +188,9 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
     try {
       const params = new URLSearchParams(qrFilters());
       const res = await fetch(`/api/fee-assignments/qr-bulk?${params}`);
-      const groups = await res.json();
-      if (!res.ok) throw new Error(groups?.error ?? 'Không thể tạo QR');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Không thể tạo QR');
+      const groups = Array.isArray(data) ? data : data?.groups;
       if (!Array.isArray(groups) || !groups.length) throw new Error('Lớp này chưa có khoản thu để tạo QR');
 
       const escape = (value: unknown) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char]!);
@@ -373,7 +377,7 @@ export function FeeAssignmentsClient({ adminRole, teacherClassId }: { adminRole?
         </CardContent>
       </Card>
 
-      <Dialog open={!!qrClassGroups} onOpenChange={(value) => { if (!value) setQrClassGroups(null); }}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Xuất PDF QR theo từng lớp</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Phạm vi đã chọn có {Object.keys(qrClassGroups ?? {}).length} lớp. Mỗi nút sẽ tạo một tệp PDF riêng cho lớp đó.</p><div className="max-h-[55vh] space-y-2 overflow-y-auto">{Object.entries(qrClassGroups ?? {}).sort(([a], [b]) => a.localeCompare(b, 'vi', { numeric: true, sensitivity: 'base' })).map(([className, groups]) => <div key={className} className="flex items-center justify-between rounded-lg border p-3"><div><p className="font-medium">Lớp {className}</p><p className="text-xs text-muted-foreground">{groups.length} học sinh</p></div><Button onClick={() => printClassQr(className, groups)}>Xuất PDF</Button></div>)}</div></DialogContent></Dialog>
+      <Dialog open={!!qrClassGroups} onOpenChange={(value) => { if (!value) { setQrClassGroups(null); setQrSummary(null); } }}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>Kiểm tra và xuất PDF QR theo lớp</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">QR chỉ tạo cho học sinh đang ở trạng thái chưa đóng. Tổng sĩ số {qrSummary?.total ?? 0}, tạo {qrSummary?.qr ?? 0} QR.</p><div className="max-h-[55vh] space-y-2 overflow-y-auto">{(qrSummary?.classes ?? []).sort((a: any, b: any) => a.className.localeCompare(b.className, 'vi', { numeric: true, sensitivity: 'base' })).map((item: any) => { const groups = qrClassGroups?.[item.className] ?? []; return <div key={item.className} className="flex items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium">Lớp {item.className}</p><p className="text-xs text-muted-foreground">Sĩ số: {item.total} · QR: {item.qr} · Đã xác nhận: {item.paid} · Cần kiểm tra: <span className={item.review ? 'font-semibold text-destructive' : ''}>{item.review}</span></p></div><Button disabled={!groups.length} onClick={() => printClassQr(item.className, groups)}>Xuất PDF ({groups.length})</Button></div>; })}</div></DialogContent></Dialog>
 
       <Dialog open={!!assignmentEditing} onOpenChange={(value) => { if (!value) setAssignmentEditing(null); }}><DialogContent><DialogHeader><DialogTitle>Chỉnh sửa khoản thu – {assignmentEditing?.student?.fullName}</DialogTitle></DialogHeader><div className="space-y-4">
         <div><Label>Số tiền</Label><Input type="number" min="0" className="mt-1" value={assignmentForm.amount} onChange={(e) => setAssignmentForm({ ...assignmentForm, amount: e.target.value })} /></div>
