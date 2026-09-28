@@ -29,6 +29,8 @@ export async function POST(request: Request) {
       }
       if (seen.has(code)) return NextResponse.json({ error: `Trùng mã học sinh ${code} trong tệp` }, { status: 400 });
       if (cccd && seenCccd.has(cccd)) return NextResponse.json({ error: `Trùng CCCD ${cccd} trong tệp` }, { status: 400 });
+      const gender = String(row?.gender ?? '').trim();
+      if (gender && !['Nam', 'Nữ'].includes(gender)) return NextResponse.json({ error: `Giới tính không hợp lệ tại dòng ${index + 2}` }, { status: 400 });
       if (row?.dateOfBirth && Number.isNaN(new Date(row.dateOfBirth).getTime())) {
         return NextResponse.json({ error: `Ngày sinh không hợp lệ tại dòng ${index + 2}` }, { status: 400 });
       }
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
     const existingByCccd = new Map(existing.filter((student) => student.cccd).map((student) => [student.cccd as string, student]));
     const rowsToImport: any[] = [];
     const conflicts: string[] = [];
-    let skipped = 0;
+    let updated = 0;
 
     for (const row of rows) {
       const code = String(row.studentCode).trim();
@@ -63,7 +65,8 @@ export async function POST(request: Request) {
         if (found.classId !== String(row.classId)) {
           conflicts.push(code);
         } else {
-          skipped += 1;
+          updated += 1;
+          rowsToImport.push({ ...row, existingId: found.id });
         }
         continue;
       }
@@ -87,10 +90,11 @@ export async function POST(request: Request) {
         parentPhone: String(row.parentPhone ?? '').trim() || null,
         zaloPhone: String(row.zaloPhone ?? '').trim() || null,
         dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+        gender: String(row.gender ?? '').trim() || null,
       };
       return prisma.student.upsert({
         where: { studentCode: String(row.studentCode).trim() },
-        update: { ...data, passwordHash: passwordHashes[index], passwordIsDefault: true },
+        update: data,
         create: {
           studentCode: String(row.studentCode).trim(),
           passwordHash: passwordHashes[index],
@@ -106,7 +110,7 @@ export async function POST(request: Request) {
     });
     await Promise.all(studentsWithFees.map((student) => refreshStudentQrContent(student.id)));
 
-    return NextResponse.json({ imported: rowsToImport.length, skipped });
+    return NextResponse.json({ imported: rowsToImport.length - updated, updated, skipped: 0 });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message ?? 'Không thể nhập học sinh' }, { status: 500 });
   }
