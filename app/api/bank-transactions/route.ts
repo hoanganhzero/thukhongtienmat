@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
     };
 
-    const [unmatchedTransactions, matchedTransactions, feeTypes] = await Promise.all([
+    const [unmatchedTransactions, matchedTransactions, feeTypes, assignments] = await Promise.all([
       prisma.bankTransaction.findMany({
         where,
         orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
@@ -50,6 +50,17 @@ export async function GET(request: Request) {
         },
         select: { amount: true },
       }),
+      prisma.feeAssignment.findMany({
+        where: {
+          status: { in: ['pending', 'uploaded'] },
+          feeType: {
+            isActive: true,
+            bankAccountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
+            name: { contains: 'BHT', mode: 'insensitive' },
+          },
+        },
+        include: { student: { include: { class: true } } },
+      }),
     ]);
 
     const matchedKeys = new Set(matchedTransactions.flatMap((transaction) => [transaction.providerTransactionId, transaction.referenceCode].filter(Boolean)));
@@ -66,11 +77,25 @@ export async function GET(request: Request) {
     return NextResponse.json({
       transactions: transactions.map((transaction) => {
         const content = normalize(transaction.content);
+        const className = content.match(/\b((?:10|11|12)[A-Z]+[A-Z0-9]*\d)\b/)?.[1] ?? '';
+        const possible = assignments
+          .filter((assignment) =>
+            assignment.amount === transaction.transferAmount &&
+            (!className || normalize(assignment.student.class.name) === className) &&
+            content.includes(normalize(assignment.student.fullName))
+          )
+          .slice(0, 5)
+          .map((assignment) => ({
+            assignmentId: assignment.id,
+            studentCode: assignment.student.studentCode,
+            fullName: assignment.student.fullName,
+            className: assignment.student.class.name,
+          }));
         let reason = 'Không khớp đúng học sinh hoặc giao dịch bị trùng';
         if (!amounts.some((amount) => amount === transaction.transferAmount)) reason = 'Số tiền không khớp khoản thu BHTT';
         else if (!content.startsWith('SEVQR')) reason = 'Nội dung chuyển khoản không bắt đầu bằng SEVQR';
         else if (!/\b(?:10|11|12)[A-Z]+[A-Z0-9]*\d\b/.test(content)) reason = 'Nội dung thiếu hoặc sai lớp học';
-        return { ...transaction, reason };
+        return { ...transaction, transactionId: transaction.providerTransactionId, reason, possible };
       }),
       total,
       page,
