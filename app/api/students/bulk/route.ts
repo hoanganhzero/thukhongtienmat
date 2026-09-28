@@ -116,6 +116,42 @@ export async function POST(request: Request) {
   }
 }
 
+
+export async function PUT(request: Request) {
+  try {
+    if (!(await isAdmin())) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
+    const body = await request.json();
+    const rows = Array.isArray(body?.students) ? body.students.slice(0, 5000) : [];
+    if (!rows.length) return NextResponse.json({ error: 'Danh sách học sinh trống' }, { status: 400 });
+
+    const cleanName = (value: unknown) => String(value ?? '').trim().replace(/\s+/g, ' ').normalize('NFC').toLocaleLowerCase('vi-VN');
+    const codes = rows.map((row: any) => String(row?.studentCode ?? '').trim()).filter(Boolean);
+    const existing = await prisma.student.findMany({
+      where: { studentCode: { in: codes }, deletedAt: null },
+      select: { id: true, studentCode: true, fullName: true },
+    });
+    const byCode = new Map(existing.map((student) => [student.studentCode, student]));
+    const updates: any[] = [];
+    let notFound = 0, nameMismatch = 0, invalid = 0;
+
+    for (const row of rows) {
+      const code = String(row?.studentCode ?? '').trim();
+      const fullName = String(row?.fullName ?? '').trim();
+      const gender = String(row?.gender ?? '').trim();
+      const date = row?.dateOfBirth ? new Date(row.dateOfBirth) : null;
+      if (!code || !fullName || !date || Number.isNaN(date.getTime()) || !['Nam', 'Nữ'].includes(gender)) { invalid++; continue; }
+      const student = byCode.get(code);
+      if (!student) { notFound++; continue; }
+      if (cleanName(student.fullName) !== cleanName(fullName)) { nameMismatch++; continue; }
+      updates.push(prisma.student.update({ where: { id: student.id }, data: { dateOfBirth: date, gender } }));
+    }
+    if (updates.length) await prisma.$transaction(updates);
+    return NextResponse.json({ updated: updates.length, notFound, nameMismatch, invalid });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message ?? 'Không thể bổ sung ngày sinh và giới tính' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     if (!(await isAdmin())) return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
