@@ -128,7 +128,7 @@ export async function GET(request: Request) {
 
     const feeAmounts = new Set(assignments.map((item) => Number(item.amount)));
     const transactions = await prisma.bankTransaction.findMany({
-      where: { provider: 'sepay', status: 'unmatched', accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber },
+      where: { provider: { in: ['sepay', 'sepay-excel'] }, status: 'unmatched', accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber },
       orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
       take: 5000,
     });
