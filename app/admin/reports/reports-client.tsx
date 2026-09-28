@@ -38,7 +38,7 @@ export function ReportsClient() {
   }, []);
 
   const load = useCallback(() => {
-    const params = new URLSearchParams({ page: String(page), limit: '50' });
+    const params = new URLSearchParams({ page: String(page), limit: '5000' });
     if (filterStatus !== 'all') params.set('status', filterStatus);
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
