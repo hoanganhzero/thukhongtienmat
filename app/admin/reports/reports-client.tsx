@@ -25,6 +25,7 @@ export function ReportsClient() {
   const [summary, setSummary] = useState<any>({ overall: {}, campuses: [], classes: [] });
   const [importing, setImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [importReviewRows, setImportReviewRows] = useState<any[]>([]);
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
@@ -86,6 +87,7 @@ export function ReportsClient() {
       if (approved) {
         const result = await send(true);
         alert(`Đã xác nhận ${result.summary.matched} học sinh. ${result.summary.review} giao dịch được giữ lại để xem xét.`);
+        setImportReviewRows((result.results ?? []).filter((row: any) => row.status === 'review'));
         load();
         loadSummary();
         loadUnmatchedTransactions();
@@ -96,6 +98,21 @@ export function ReportsClient() {
       setImporting(false);
       if (importInputRef.current) importInputRef.current.value = '';
     }
+  };
+
+  const confirmReviewedPayment = async (transactionId: string, assignmentId: string) => {
+    if (!confirm('Xác nhận thủ công học sinh này đã đóng BHTT từ giao dịch đang chọn?')) return;
+    const response = await fetch('/api/bank-transactions/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactionId, assignmentId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return alert(data?.error ?? 'Không thể xác nhận giao dịch');
+    setImportReviewRows(rows => rows.filter(row => row.transactionId !== transactionId));
+    load();
+    loadSummary();
+    loadUnmatchedTransactions();
   };
 
   const handleExport = () => {
@@ -227,6 +244,25 @@ export function ReportsClient() {
           </Table>
         </CardContent>
       </Card>
+
+      {!!importReviewRows.length && <Card className="border-yellow-300">
+        <CardHeader>
+          <CardTitle>Giao dịch Excel cần cân nhắc</CardTitle>
+          <p className="text-sm text-muted-foreground">Chỉ bấm xác nhận khi đã kiểm tra đúng họ tên, lớp và số tiền.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {importReviewRows.map((row: any) => <div key={row.transactionId} className="rounded-lg border p-3">
+            <p className="text-sm">{row.content}</p>
+            <p className="mt-1 text-sm text-red-600">{row.reason}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(row.possible ?? []).map((student: any) => <Button key={student.assignmentId} size="sm" variant="outline" onClick={() => confirmReviewedPayment(row.transactionId, student.assignmentId)}>
+                Xác nhận {student.fullName} — {student.className}
+              </Button>)}
+              {!(row.possible ?? []).length && <span className="text-sm text-muted-foreground">Không có học sinh đủ điều kiện gợi ý.</span>}
+            </div>
+          </div>)}
+        </CardContent>
+      </Card>}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
