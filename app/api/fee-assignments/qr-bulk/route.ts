@@ -34,10 +34,47 @@ export async function GET(request: Request) {
   const user = (await auth())?.user as any;
   if (user?.role !== 'admin') return NextResponse.json({ error: 'Chưa đăng nhập' }, { status: 401 });
   const groups = await getGroups(request, user);
-  return NextResponse.json(groups.map((group) => ({
+  const rows = groups.map((group) => ({
     ...group,
     qrUrl: buildVietQrUrl(group.accountNo, group.amount, group.description, group.accountName, group.bankName),
-  })));
+  }));
+  const { searchParams } = new URL(request.url);
+  const studentWhere: any = { deletedAt: null };
+  if (user.adminRole === 'teacher') studentWhere.classId = { in: teacherClassIds(user) };
+  else if (searchParams.get('classId')) studentWhere.classId = searchParams.get('classId');
+  else if (searchParams.get('campusId')) studentWhere.class = { campusId: searchParams.get('campusId') };
+
+  const students = await prisma.student.findMany({
+    where: studentWhere,
+    select: { id: true, class: { select: { id: true, name: true } } },
+  });
+  const assignmentWhere: any = { student: studentWhere };
+  if (searchParams.get('feeTypeId')) assignmentWhere.feeTypeId = searchParams.get('feeTypeId');
+  const scopedAssignments = await prisma.feeAssignment.findMany({
+    where: assignmentWhere,
+    select: { studentId: true, status: true },
+  });
+  const confirmed = new Set(scopedAssignments.filter((item) => item.status === 'confirmed').map((item) => item.studentId));
+  const qrStudents = new Set(rows.map((item) => item.studentId));
+  const classes = new Map<string, { className: string; studentIds: string[] }>();
+  for (const student of students) {
+    const item = classes.get(student.class.id) ?? { className: student.class.name, studentIds: [] };
+    item.studentIds.push(student.id);
+    classes.set(student.class.id, item);
+  }
+
+  return NextResponse.json({
+    groups: rows,
+    summary: {
+      total: students.length,
+      qr: students.filter((item) => qrStudents.has(item.id)).length,
+      classes: [...classes.values()].map((item) => {
+        const qr = item.studentIds.filter((id) => qrStudents.has(id)).length;
+        const paid = item.studentIds.filter((id) => confirmed.has(id)).length;
+        return { className: item.className, total: item.studentIds.length, qr, paid, review: Math.max(0, item.studentIds.length - qr - paid) };
+      }),
+    },
+  });
 }
 
 export async function POST(request: Request) {
