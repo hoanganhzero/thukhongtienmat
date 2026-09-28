@@ -21,7 +21,10 @@ export function StudentDashboardClient({ session }: Props) {
   const [student, setStudent] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
-  const [tab, setTab] = useState<'fees' | 'notifications'>('fees');
+  const [tab, setTab] = useState<'fees' | 'notifications' | 'feedback'>('fees');
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [feedbackFor, setFeedbackFor] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const user = session?.user;
@@ -38,6 +41,7 @@ export function StudentDashboardClient({ session }: Props) {
       .catch(() => {});
     refreshStudent();
     fetch(`/api/notifications?studentId=${studentId}`).then(r => r.json()).then(d => setNotifications(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch('/api/feedback').then(r => r.json()).then(d => setFeedbacks(Array.isArray(d) ? d : [])).catch(() => {});
     const timer = window.setInterval(refreshStudent, 5000);
     return () => window.clearInterval(timer);
   }, [studentId]);
@@ -56,6 +60,20 @@ export function StudentDashboardClient({ session }: Props) {
     toast?.success?.('Đã gửi ảnh! Chờ nhà trường duyệt.');
     setUploadingFor(null);
     fetch(`/api/students/${studentId}`).then(r => r.json()).then(d => setStudent(d)).catch(() => {});
+  };
+
+  const sendFeedback = async () => {
+    if (!feedbackFor || feedbackMessage.trim().length < 5) return;
+    const response = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      feeAssignmentId: feedbackFor, message: feedbackMessage,
+    })});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return toast?.error?.(data?.error ?? 'Không thể gửi phản hồi');
+    setFeedbackMessage('');
+    setFeedbackFor('');
+    const refreshed = await fetch('/api/feedback').then(r => r.json());
+    setFeedbacks(Array.isArray(refreshed) ? refreshed : []);
+    toast?.success?.('Đã gửi phản hồi đến nhà trường.');
   };
 
   const unreadCount = (notifications ?? []).filter((n: any) => !n?.isRead).length;
@@ -128,6 +146,9 @@ export function StudentDashboardClient({ session }: Props) {
           <Button variant={tab === 'notifications' ? 'default' : 'outline'} size="sm" onClick={() => setTab('notifications')}>
             Thông báo {unreadCount > 0 && `(${unreadCount})`}
           </Button>
+          <Button variant={tab === 'feedback' ? 'default' : 'outline'} size="sm" onClick={() => setTab('feedback')}>
+            Phản hồi
+          </Button>
         </div>
 
         {tab === 'fees' && (
@@ -178,6 +199,26 @@ export function StudentDashboardClient({ session }: Props) {
                 </Card>
               ))
             )}
+          </div>
+        )}
+
+        {tab === 'feedback' && (
+          <div className="space-y-4">
+            <Card><CardContent className="p-5 space-y-3">
+              <h3 className="font-semibold">Báo sai sót khoản thu</h3>
+              <select className="w-full rounded-md border p-2 text-sm" value={feedbackFor} onChange={event => setFeedbackFor(event.target.value)}>
+                <option value="">Chọn khoản thu cần phản hồi</option>
+                {feeAssignments.map((fee: any) => <option key={fee.id} value={fee.id}>{fee.feeType?.name} — {formatCurrency(fee.amount)} — {fee.status}</option>)}
+              </select>
+              <textarea className="min-h-24 w-full rounded-md border p-3 text-sm" placeholder="Mô tả nội dung sai sót..." value={feedbackMessage} onChange={event => setFeedbackMessage(event.target.value)} />
+              <Button className="w-full" disabled={!feedbackFor || feedbackMessage.trim().length < 5} onClick={sendFeedback}>Gửi phản hồi</Button>
+            </CardContent></Card>
+            {feedbacks.map((item: any) => <Card key={item.id}><CardContent className="p-4 space-y-2">
+              <p className="font-medium">{item.feeAssignment?.feeType?.name ?? 'Khoản thu'}</p>
+              <p className="text-sm">{item.message}</p>
+              <p className="text-xs text-muted-foreground">{item.status === 'resolved' ? '✅ Đã xử lý' : '⏳ Đang chờ xử lý'}</p>
+              {item.reply && <p className="rounded-md bg-green-50 p-3 text-sm text-green-800"><b>Nhà trường trả lời:</b> {item.reply}</p>}
+            </CardContent></Card>)}
           </div>
         )}
 
