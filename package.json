@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
-    "start": "prisma migrate resolve --rolled-back 20260917_add_bank_transactions || true; prisma migrate resolve --rolled-back 20260920_configure_bhtt_vietinbank || true; prisma migrate resolve --rolled-back 20260921_allow_teacher_multiple_classes || true; (prisma migrate deploy || echo 'Migration du lieu khong thanh cong; tiep tuc khoi dong voi schema hien tai.') && (prisma db seed || echo 'Seed du lieu mau that bai; website van tiep tuc khoi dong.') && next start",
+    "start": "prisma migrate resolve --rolled-back 20260917_add_bank_transactions || true; prisma migrate resolve --rolled-back 20260920_configure_bhtt_vietinbank || true; prisma migrate resolve --rolled-back 20260921_allow_teacher_multiple_classes || true; prisma migrate resolve --rolled-back 20260928_add_student_gender || true; (prisma migrate deploy || echo 'Migration du lieu khong thanh cong; tiep tuc khoi dong voi schema hien tai.') && (prisma db seed || echo 'Seed du lieu mau that bai; website van tiep tuc khoi dong.') && next start",
     "lint": "eslint ."
   },
   "prisma": {
