@@ -87,7 +87,7 @@ export function FeeTypesClient() {
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editing ? 'Sửa khoản thu' : 'Thêm khoản thu'}</DialogTitle></DialogHeader>
               <div className="space-y-4">
-                <div><Label>Tên khoản thu</Label><Input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} className="mt-1" /></div>
+                <div><Label>Tên khoản thu</Label><Input disabled={isBhtt(editing?.name)} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} className="mt-1" /></div>
                 <div><Label>Mô tả</Label><Input value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} className="mt-1" /></div>
                 <div><Label>Số tiền mặc định (đồng)</Label><Input type="number" min="0" value={form.amount} onChange={event => setForm({ ...form, amount: Number(event.target.value) })} className="mt-1" /></div>
                 {bhtt && <p className="rounded-lg bg-primary/10 p-3 text-sm">BHTT luôn nhận tiền qua MB Bank 0335127226 — NGUYEN THI PHUONG THAO.</p>}
