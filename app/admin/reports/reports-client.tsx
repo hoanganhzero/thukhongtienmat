@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/status-badge';
@@ -21,6 +22,7 @@ export function ReportsClient() {
   const [filterClass, setFilterClass] = useState('all');
   const [filterGrade, setFilterGrade] = useState('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [reportSearch, setReportSearch] = useState('');
   const [page, setPage] = useState(1);
   const [unmatchedTransactions, setUnmatchedTransactions] = useState<any[]>([]);
   const [unmatchedTotal, setUnmatchedTotal] = useState(0);
@@ -218,6 +220,12 @@ export function ReportsClient() {
         </Select>
       </div>
 
+      <Input
+        placeholder="Tra cứu nhanh mã học sinh, họ tên hoặc lớp..."
+        value={reportSearch}
+        onChange={event => setReportSearch(event.target.value)}
+      />
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle>Thống kê theo cơ sở</CardTitle></CardHeader>
@@ -261,7 +269,7 @@ export function ReportsClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignments.map((a: any) => (
+              {assignments.filter((a: any) => `${a?.student?.studentCode ?? ''} ${a?.student?.fullName ?? ''} ${a?.student?.class?.name ?? ''}`.toLocaleLowerCase('vi').includes(reportSearch.toLocaleLowerCase('vi'))).map((a: any) => (
                 <TableRow key={a?.id}>
                   <TableCell className="font-mono text-sm">{a?.student?.studentCode}</TableCell>
                   <TableCell>{a?.student?.fullName}</TableCell>
