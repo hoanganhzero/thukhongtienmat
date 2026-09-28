@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const feeTypeId = searchParams.get('feeTypeId');
     const campusId = searchParams.get('campusId');
     const classId = searchParams.get('classId');
+    const grade = searchParams.get('grade');
     const page = parseInt(searchParams.get('page') ?? '1');
     const limit = parseInt(searchParams.get('limit') ?? '50');
 
@@ -29,7 +30,10 @@ export async function GET(request: Request) {
       if (!classIds.length) return NextResponse.json({ error: 'Tài khoản chưa được phân công lớp' }, { status: 403 });
       where.student = { classId: { in: classIds } };
     } else if (classId) where.student = { classId };
-    if (user.adminRole !== 'teacher' && campusId) where.student = { ...(where.student ?? {}), class: { campusId } };
+    if (user.adminRole !== 'teacher' && (campusId || grade)) where.student = { ...(where.student ?? {}), class: {
+      ...(campusId ? { campusId } : {}),
+      ...(grade ? { name: { startsWith: grade, mode: 'insensitive' } } : {}),
+    } };
 
     const allAssignments = await prisma.feeAssignment.findMany({
       where,
