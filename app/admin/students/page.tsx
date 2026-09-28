@@ -4,6 +4,6 @@ import { StudentsClient } from './students-client';
 
 export default async function StudentsPage() {
   const session = await auth();
-  if ((session?.user as any)?.role !== 'admin') redirect('/admin/login');
+  if ((session?.user as any)?.role !== 'admin') redirect('/admin/login?role=teacher');
   return <StudentsClient adminRole={(session!.user as any).adminRole} />;
 }
