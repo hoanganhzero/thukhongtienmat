@@ -29,14 +29,19 @@ export async function GET(request: Request) {
       accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
     };
 
-    const [transactions, total, feeTypes] = await Promise.all([
+    const [unmatchedTransactions, matchedTransactions, feeTypes] = await Promise.all([
       prisma.bankTransaction.findMany({
         where,
         orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
       }),
-      prisma.bankTransaction.count({ where }),
+      prisma.bankTransaction.findMany({
+        where: {
+          provider: { in: ['sepay', 'sepay-excel'] },
+          status: 'matched',
+          accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
+        },
+        select: { providerTransactionId: true, referenceCode: true },
+      }),
       prisma.feeType.findMany({
         where: {
           isActive: true,
@@ -47,6 +52,16 @@ export async function GET(request: Request) {
       }),
     ]);
 
+    const matchedKeys = new Set(matchedTransactions.flatMap((transaction) => [transaction.providerTransactionId, transaction.referenceCode].filter(Boolean)));
+    const seenKeys = new Set<string>();
+    const currentTransactions = unmatchedTransactions.filter((transaction) => {
+      const keys = [transaction.providerTransactionId, transaction.referenceCode].filter(Boolean) as string[];
+      if (keys.some((key) => matchedKeys.has(key) || seenKeys.has(key))) return false;
+      keys.forEach((key) => seenKeys.add(key));
+      return true;
+    });
+    const total = currentTransactions.length;
+    const transactions = currentTransactions.slice((page - 1) * limit, page * limit);
     const amounts = feeTypes.map((feeType) => feeType.amount);
     return NextResponse.json({
       transactions: transactions.map((transaction) => {
