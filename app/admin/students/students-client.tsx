@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search, Upload, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { parseStudentRows } from '@/lib/student-import';
+import { normalizeDateOfBirth, parseStudentRows } from '@/lib/student-import';
 import { formatDate } from '@/lib/date-format';
 
 export function StudentsClient({ adminRole }: { adminRole?: string }) {
@@ -75,6 +75,22 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const schoolExport = String(sheet.A7?.v ?? '').trim().toUpperCase() === 'STT';
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', ...(schoolExport ? { range: 6 } : {}) });
+      if (schoolExport) {
+        const students = rows.map((row) => ({
+          studentCode: String(row['Mã học sinh'] ?? '').trim(),
+          fullName: String(row['Họ và tên'] ?? '').trim(),
+          dateOfBirth: normalizeDateOfBirth(row['Ngày sinh']),
+          gender: String(row['Giới tính'] ?? '').trim(),
+        }));
+        const res = await fetch('/api/students/bulk', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ students }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error ?? 'Không thể bổ sung thông tin học sinh');
+        toast.success(`Đã cập nhật ngày sinh và giới tính cho ${data.updated ?? 0} học sinh; không tìm thấy ${data.notFound ?? 0}; lệch họ tên ${data.nameMismatch ?? 0}; dữ liệu lỗi ${data.invalid ?? 0}`);
+        loadStudents();
+        return;
+      }
       const parsed = parseStudentRows(rows, allClasses);
       if (parsed.errors.length) {
         toast.error(parsed.errors.slice(0, 5).join('\n'));
