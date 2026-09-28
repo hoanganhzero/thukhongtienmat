@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Building2, GraduationCap, Receipt, ClipboardCheck,
-  BarChart3, Bell, Settings, LogOut, Users, CreditCard, ImageIcon, Wallet, Grid2X2, X
+  BarChart3, Bell, MessageSquareWarning, Settings, LogOut, Users, CreditCard, ImageIcon, Wallet, Grid2X2, X
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
@@ -21,7 +21,8 @@ const menuItems: { href: string; label: string; icon: any; roles: Role[] }[] = [
   { href: '/admin/fee-types', label: 'Khoản thu', icon: CreditCard, roles: ['super_admin', 'accountant', 'treasurer'] },
   { href: '/admin/fee-assignments', label: 'Theo dõi đóng tiền', icon: Receipt, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
   { href: '/admin/verify', label: 'Duyệt biên lai', icon: ImageIcon, roles: ['super_admin', 'accountant', 'treasurer'] },
-  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart3, roles: ['super_admin', 'accountant', 'treasurer'] },
+  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart3, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
+  { href: '/admin/feedback', label: 'Phản hồi sai sót', icon: MessageSquareWarning, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
   { href: '/admin/notifications', label: 'Gửi nhắc nhở', icon: Bell, roles: ['super_admin', 'accountant', 'treasurer', 'teacher'] },
   { href: '/admin/accounts', label: 'Tài khoản', icon: Users, roles: ['super_admin'] },
   { href: '/admin/settings', label: 'Cài đặt', icon: Settings, roles: ['super_admin'] },
