@@ -85,6 +85,7 @@ export async function POST(request: Request) {
         phone: data.phone,
         parentPhone: data.parentPhone,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        gender: ['Nam', 'Nữ'].includes(String(data.gender ?? '').trim()) ? String(data.gender).trim() : null,
         passwordHash: hash,
         passwordIsDefault: true,
         zaloPhone: data.zaloPhone,
