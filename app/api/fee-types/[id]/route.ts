@@ -15,11 +15,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (user?.role !== 'admin' || user.adminRole === 'teacher') return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     const { id } = await params;
     const data = await request.json();
+    const existing = await prisma.feeType.findUnique({ where: { id }, select: { name: true } });
     const amount = Number(data.amount);
-    const name = String(data.name ?? '').trim();
+    const name = isBhtt(existing?.name) ? 'BHTT' : String(data.name ?? '').trim();
     if (!name || !Number.isFinite(amount) || amount < 0) return NextResponse.json({ error: 'Thông tin khoản thu chưa hợp lệ' }, { status: 400 });
 
-    const bank = isBhtt(name) ? DEFAULT_PAYMENT_ACCOUNT : {
+    const bank = isBhtt(existing?.name) || isBhtt(name) ? DEFAULT_PAYMENT_ACCOUNT : {
       bankName: String(data.bankName ?? '').trim(),
       bankAccountNumber: String(data.bankAccountNumber ?? '').replace(/\D/g, ''),
       bankAccountName: String(data.bankAccountName ?? '').trim(),
