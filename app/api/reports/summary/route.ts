@@ -52,7 +52,10 @@ export async function GET(request: Request) {
     };
     if (user.adminRole === 'teacher') where.student = { classId: { in: teacherClassIds(user) } };
     else if (params.get('classId')) where.student = { classId: params.get('classId') };
-    else if (params.get('campusId')) where.student = { class: { campusId: params.get('campusId') } };
+    else if (params.get('campusId') || params.get('grade')) where.student = { class: {
+      ...(params.get('campusId') ? { campusId: params.get('campusId') } : {}),
+      ...(params.get('grade') ? { name: { startsWith: params.get('grade'), mode: 'insensitive' } } : {}),
+    } };
 
     const assignments = await prisma.feeAssignment.findMany({
       where,
