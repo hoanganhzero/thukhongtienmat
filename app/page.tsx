@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Search, LogIn, Shield, QrCode, Upload, CheckCircle } from 'lucide-react';
+import { Search, LogIn, Shield, QrCode, Upload, CheckCircle, UserRoundCheck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function HomePage() {
@@ -18,6 +18,9 @@ export default function HomePage() {
           <div className="flex gap-2">
             <Link href="/student/login" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
               <LogIn className="h-4 w-4" /> Học sinh
+            </Link>
+            <Link href="/admin/login?role=teacher" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+              <UserRoundCheck className="h-4 w-4" /> GVCN
             </Link>
             <Link href="/admin/login" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
               <Shield className="h-4 w-4" /> Cán bộ
