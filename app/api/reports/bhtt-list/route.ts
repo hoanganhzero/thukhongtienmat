@@ -63,8 +63,9 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     '',
   ]));
   const firstData = 8;
-  const lastData = Math.max(firstData, rows.length);
-  rows.push(['TỔNG CỘNG', '', '', '', '', { f: `SUM(F${firstData}:F${lastData})` }, '']);
+  const lastData = rows.length;
+  const totalRow = rows.length + 1;
+  rows.push(['TỔNG CỘNG', '', '', '', '', items.length ? { f: `SUM(F${firstData}:F${lastData})` } : 0, '']);
   rows.push([`Bằng chữ: ${moneyInWords(total)}`, '', '', '', '', '', '']);
   rows.push([]);
   rows.push(['', 'Người lập bảng', '', '', 'Tân Ninh, ngày ..... tháng ..... năm ........', '', '']);
@@ -77,14 +78,14 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, { s: { r: 0, c: 3 }, e: { r: 0, c: 6 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }, { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } },
     { s: { r: 3, c: 0 }, e: { r: 3, c: 6 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } },
-    { s: { r: lastData, c: 0 }, e: { r: lastData, c: 4 } },
-    { s: { r: lastData + 1, c: 0 }, e: { r: lastData + 1, c: 6 } },
-    { s: { r: lastData + 3, c: 3 }, e: { r: lastData + 3, c: 6 } },
+    { s: { r: totalRow - 1, c: 0 }, e: { r: totalRow - 1, c: 4 } },
+    { s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } },
+    { s: { r: totalRow + 2, c: 3 }, e: { r: totalRow + 2, c: 6 } },
   ];
   sheet['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 10 }, { wch: 14 }, { wch: 11 }, { wch: 16 }, { wch: 18 }];
   sheet['!rows'] = [{ hpt: 22 }, { hpt: 48 }, { hpt: 8 }, { hpt: 26 }, { hpt: 22 }, { hpt: 8 }, { hpt: 32 }];
   sheet['!freeze'] = { xSplit: 0, ySplit: 7 } as any;
-  sheet['!autofilter'] = { ref: `A7:G${lastData}` };
+  sheet['!autofilter'] = { ref: `A7:G${Math.max(7, lastData)}` };
   sheet['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
   sheet['!print'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 } as any;
   const border = { style: 'thin', color: { rgb: '000000' } };
@@ -97,19 +98,19 @@ function makeSheet(items: any[], title: string, academicYear: string) {
   for (const address of ['A1', 'D1']) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address === 'D1' }, alignment: { horizontal: 'center', vertical: 'center' } };
   for (const address of ['A2', 'D2']) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
   for (const address of ['A4', 'A5']) sheet[address].s = { ...base, font: { name: 'Arial', sz: address === 'A4' ? 14 : 12, bold: true }, alignment: { horizontal: 'center', vertical: 'center' } };
-  for (let row = 7; row <= lastData + 1; row++) for (let col = 0; col < 7; col++) {
+  for (let row = 7; row <= totalRow; row++) for (let col = 0; col < 7; col++) {
     const address = XLSX.utils.encode_cell({ r: row - 1, c: col });
-    sheet[address].s = { ...base, border: { top: border, bottom: border, left: border, right: border }, alignment: { horizontal: col === 1 ? 'left' : col === 5 ? 'right' : 'center', vertical: 'center', wrapText: true }, font: { name: 'Arial', sz: 11, bold: row === 7 || row === lastData + 1 } };
+    sheet[address].s = { ...base, border: { top: border, bottom: border, left: border, right: border }, alignment: { horizontal: col === 1 ? 'left' : col === 5 ? 'right' : 'center', vertical: 'center', wrapText: true }, font: { name: 'Arial', sz: 11, bold: row === 7 || row === totalRow } };
   }
   for (let row = firstData; row <= lastData; row++) {
     if (sheet['D' + row]) { sheet['D' + row].t = 'd'; sheet['D' + row].z = 'dd/mm/yyyy'; }
     if (sheet['F' + row]) sheet['F' + row].z = '#,##0 "đ"';
   }
-  sheet['F' + (lastData + 1)].z = '#,##0 "đ"';
-  sheet['A' + (lastData + 2)].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: { top: border, bottom: border, left: border, right: border } };
-  sheet['D' + (lastData + 4)].s = { ...base, font: { name: 'Arial', sz: 11, italic: true }, alignment: { horizontal: 'center' } };
-  for (const address of ['B' + (lastData + 5), 'D' + (lastData + 5)]) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address.startsWith('D') }, alignment: { horizontal: 'center' } };
-  sheet['B' + (lastData + 9)].s = { ...base, alignment: { horizontal: 'center' } };
+  sheet['F' + totalRow].z = '#,##0 "đ"';
+  sheet['A' + (totalRow + 1)].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: { top: border, bottom: border, left: border, right: border } };
+  sheet['D' + (totalRow + 3)].s = { ...base, font: { name: 'Arial', sz: 11, italic: true }, alignment: { horizontal: 'center' } };
+  for (const address of ['B' + (totalRow + 4), 'D' + (totalRow + 4)]) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address.startsWith('D') }, alignment: { horizontal: 'center' } };
+  sheet['B' + (totalRow + 6)].s = { ...base, alignment: { horizontal: 'center' } };
   return sheet;
 }
 
