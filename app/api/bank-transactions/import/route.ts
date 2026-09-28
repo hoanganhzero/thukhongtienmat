@@ -19,7 +19,7 @@ function normalize(value: unknown) {
 function parseDate(value: unknown) {
   const match = String(value ?? '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
   if (!match) return null;
-  return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4] ?? 0), Number(match[5] ?? 0), Number(match[6] ?? 0));
+  return new Date(Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4] ?? 0) - 7, Number(match[5] ?? 0), Number(match[6] ?? 0)));
 }
 
 function read(row: Record<string, unknown>, names: string[]) {
