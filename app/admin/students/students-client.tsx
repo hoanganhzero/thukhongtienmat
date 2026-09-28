@@ -73,7 +73,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+      const schoolExport = String(sheet.A7?.v ?? '').trim().toUpperCase() === 'STT';
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', ...(schoolExport ? { range: 6 } : {}) });
       const parsed = parseStudentRows(rows, allClasses);
       if (parsed.errors.length) {
         toast.error(parsed.errors.slice(0, 5).join('\n'));
@@ -86,7 +87,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? 'Không thể nhập danh sách');
-      toast.success(`Đã thêm ${data.imported ?? 0} học sinh; bỏ qua ${data.skipped ?? 0} học sinh đã có trong lớp`);
+      toast.success(`Đã thêm ${data.imported ?? 0} học sinh; cập nhật ${data.updated ?? 0} học sinh đã có`);
       loadStudents();
     } catch (error: any) {
       toast.error(error?.message ?? 'Tệp Excel không hợp lệ');
