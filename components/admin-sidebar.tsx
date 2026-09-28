@@ -76,7 +76,7 @@ export function AdminSidebar({ adminRole = 'super_admin', fullName }: { adminRol
         </div>
         {fullName ? <p className="text-xs text-muted-foreground mt-1.5 truncate">{fullName}</p> : null}
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="min-h-0 flex-1 overflow-y-auto p-3 space-y-1">
         {items.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href));
           return (
@@ -92,7 +92,7 @@ export function AdminSidebar({ adminRole = 'super_admin', fullName }: { adminRol
               onClick={() => setOpen(false)}
             >
               <item.icon className="h-4 w-4 flex-shrink-0" />
-              {item.label}
+              {role === 'teacher' && item.href === '/admin/students' ? 'Tra cứu lớp mình' : role === 'teacher' && item.href === '/admin/reports' ? 'Báo cáo lớp mình' : item.label}
             </Link>
           );
         })}
