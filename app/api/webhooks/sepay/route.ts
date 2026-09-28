@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { findPaymentMatch } from '@/lib/bank-matching';
+import { DEFAULT_PAYMENT_ACCOUNT, normalizeAccountNumber } from '@/lib/payment-account';
 
 type SePayPayload = {
   id?: number | string;
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
   const providerTransactionId = String(payload.id ?? '');
   const transferAmount = Number(payload.transferAmount ?? 0);
-  const accountNumber = String(payload.accountNumber ?? '');
+  const accountNumber = normalizeAccountNumber(payload.accountNumber);
   if (!providerTransactionId || !accountNumber || transferAmount <= 0 || String(payload.transferType ?? '').toLowerCase() !== 'in') {
     return NextResponse.json({ success: false, message: 'Invalid transaction' }, { status: 400 });
   }
@@ -72,12 +73,21 @@ export async function POST(request: Request) {
     console.error('SePay webhook storage error:', error);
     return NextResponse.json({ success: false, message: 'Storage error' }, { status: 500 });
   }
-  if (transaction.status === 'matched') return NextResponse.json({ success: true });
+  if (transaction.status === 'matched') return NextResponse.json({ success: true, matched: true });
+
+  if (accountNumber !== DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber) {
+    console.warn(`SePay transaction ${providerTransactionId} belongs to an unconfigured account ${accountNumber}.`);
+    return NextResponse.json({ success: true, matched: false, message: 'Account not configured' });
+  }
 
   const candidates = await prisma.feeAssignment.findMany({
     where: {
       status: { in: ['pending', 'uploaded'] },
-      feeType: { bankAccountNumber: accountNumber },
+      feeType: {
+        isActive: true,
+        bankAccountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
+        name: { contains: 'BHT', mode: 'insensitive' },
+      },
     },
     include: { student: { include: { class: true } }, feeType: true },
   });
@@ -103,5 +113,5 @@ export async function POST(request: Request) {
     console.warn(`SePay transaction ${providerTransactionId} was not auto-matched.`);
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, matched: matchedAssignments.length > 0 });
 }
