@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { DEFAULT_PAYMENT_ACCOUNT } from '@/lib/payment-account';
 import { teacherClassIds } from '@/lib/teacher-scope';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 const compare = (a: string, b: string) => a.localeCompare(b, 'vi', { sensitivity: 'base', numeric: true });
 const givenName = (name: string) => name.trim().split(/\s+/).at(-1) ?? '';
@@ -14,14 +14,39 @@ function formatDate(value: Date | null) {
   return value ? value.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
 }
 
+function moneyInWords(value: number) {
+  const digit = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+  const group = (number: number, full: boolean) => {
+    const hundred = Math.floor(number / 100), ten = Math.floor((number % 100) / 10), unit = number % 10;
+    const words: string[] = [];
+    if (hundred || full) words.push(digit[hundred], 'trăm');
+    if (ten > 1) words.push(digit[ten], 'mươi');
+    else if (ten === 1) words.push('mười');
+    else if (unit && (hundred || full)) words.push('lẻ');
+    if (unit) words.push(unit === 1 && ten > 1 ? 'mốt' : unit === 5 && ten > 0 ? 'lăm' : digit[unit]);
+    return words.join(' ');
+  };
+  if (!value) return 'Không đồng';
+  const millions = Math.floor(value / 1_000_000);
+  const thousands = Math.floor((value % 1_000_000) / 1_000);
+  const remainder = value % 1_000;
+  const words = [
+    millions ? `${group(millions, false)} triệu` : '',
+    thousands ? `${group(thousands, Boolean(millions))} nghìn` : '',
+    remainder ? group(remainder, Boolean(millions || thousands)) : '',
+  ].filter(Boolean).join(' ');
+  return words.charAt(0).toUpperCase() + words.slice(1) + ' đồng';
+}
+
 function safeSheetName(value: string) {
   return value.replace(/[\\/?*\[\]:]/g, '-').slice(0, 31) || 'BHTT';
 }
 
 function makeSheet(items: any[], title: string, academicYear: string) {
+  const total = items.reduce((sum, item) => sum + Number(item.amount), 0);
   const rows: any[][] = [
-    ['SỞ GD&ĐT TÂY NINH', '', '', 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', '', '', ''],
-    ['TRUNG TÂM GDNN-GDTX\nKHU VỰC TÂN NINH\n***', '', '', 'Độc lập - Tự do - Hạnh phúc', '', '', ''],
+    ['SỞ GD& ĐT TÂY NINH', '', '', 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', '', '', ''],
+    ['TRUNG TÂM GDNN - GDTX\nKHU VỰC TÂN NINH\n***', '', '', 'Độc Lập - Tự Do - Hạnh Phúc', '', '', ''],
     [],
     ['DANH SÁCH HỌC SINH THAM GIA BHTT', '', '', '', '', '', ''],
     [title + ' — NĂM HỌC: ' + academicYear, '', '', '', '', '', ''],
@@ -32,15 +57,15 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     index + 1,
     item.student.fullName,
     item.student.class.name,
-    formatDate(item.student.dateOfBirth),
+    item.student.dateOfBirth ?? '',
     item.student.gender ?? '',
     Number(item.amount),
-    item.paidAt ? 'Đã đóng ngày ' + formatDate(item.paidAt) : 'Đã xác nhận',
+    '',
   ]));
   const firstData = 8;
   const lastData = Math.max(firstData, rows.length);
-  rows.push(['', 'TỔNG CỘNG', '', '', '', { f: `SUM(F${firstData}:F${lastData})` }, '']);
-  rows.push(['', 'Bằng chữ:', '', '', '', '', '']);
+  rows.push(['TỔNG CỘNG', '', '', '', '', { f: `SUM(F${firstData}:F${lastData})` }, '']);
+  rows.push([`Bằng chữ: ${moneyInWords(total)}`, '', '', '', '', '', '']);
   rows.push([]);
   rows.push(['', 'Người lập bảng', '', '', 'Tân Ninh, ngày ..... tháng ..... năm ........', '', '']);
   rows.push(['', '', '', '', 'P. GIÁM ĐỐC', '', '']);
@@ -52,14 +77,39 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, { s: { r: 0, c: 3 }, e: { r: 0, c: 6 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }, { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } },
     { s: { r: 3, c: 0 }, e: { r: 3, c: 6 } }, { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } },
+    { s: { r: lastData, c: 0 }, e: { r: lastData, c: 4 } },
+    { s: { r: lastData + 1, c: 0 }, e: { r: lastData + 1, c: 6 } },
+    { s: { r: lastData + 3, c: 3 }, e: { r: lastData + 3, c: 6 } },
   ];
-  sheet['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 28 }];
-  sheet['!rows'] = [{ hpt: 22 }, { hpt: 48 }, { hpt: 8 }, { hpt: 26 }, { hpt: 22 }];
+  sheet['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 10 }, { wch: 14 }, { wch: 11 }, { wch: 16 }, { wch: 18 }];
+  sheet['!rows'] = [{ hpt: 22 }, { hpt: 48 }, { hpt: 8 }, { hpt: 26 }, { hpt: 22 }, { hpt: 8 }, { hpt: 32 }];
   sheet['!freeze'] = { xSplit: 0, ySplit: 7 } as any;
   sheet['!autofilter'] = { ref: `A7:G${lastData}` };
   sheet['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
   sheet['!print'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 } as any;
-  for (let row = firstData; row <= lastData + 1; row++) if (sheet['F' + row]) sheet['F' + row].z = '#,##0 "đ"';
+  const border = { style: 'thin', color: { rgb: '000000' } };
+  const base = { font: { name: 'Arial', sz: 11 }, alignment: { vertical: 'center' } };
+  for (let row = 1; row <= rows.length; row++) for (let col = 0; col < 7; col++) {
+    const address = XLSX.utils.encode_cell({ r: row - 1, c: col });
+    if (!sheet[address]) sheet[address] = { t: 's', v: '' };
+    sheet[address].s = base;
+  }
+  for (const address of ['A1', 'D1']) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address === 'D1' }, alignment: { horizontal: 'center', vertical: 'center' } };
+  for (const address of ['A2', 'D2']) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+  for (const address of ['A4', 'A5']) sheet[address].s = { ...base, font: { name: 'Arial', sz: address === 'A4' ? 14 : 12, bold: true }, alignment: { horizontal: 'center', vertical: 'center' } };
+  for (let row = 7; row <= lastData + 1; row++) for (let col = 0; col < 7; col++) {
+    const address = XLSX.utils.encode_cell({ r: row - 1, c: col });
+    sheet[address].s = { ...base, border: { top: border, bottom: border, left: border, right: border }, alignment: { horizontal: col === 1 ? 'left' : col === 5 ? 'right' : 'center', vertical: 'center', wrapText: true }, font: { name: 'Arial', sz: 11, bold: row === 7 || row === lastData + 1 } };
+  }
+  for (let row = firstData; row <= lastData; row++) {
+    if (sheet['D' + row]) { sheet['D' + row].t = 'd'; sheet['D' + row].z = 'dd/mm/yyyy'; }
+    if (sheet['F' + row]) sheet['F' + row].z = '#,##0 "đ"';
+  }
+  sheet['F' + (lastData + 1)].z = '#,##0 "đ"';
+  sheet['A' + (lastData + 2)].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: { top: border, bottom: border, left: border, right: border } };
+  sheet['D' + (lastData + 4)].s = { ...base, font: { name: 'Arial', sz: 11, italic: true }, alignment: { horizontal: 'center' } };
+  for (const address of ['B' + (lastData + 5), 'D' + (lastData + 5)]) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address.startsWith('D') }, alignment: { horizontal: 'center' } };
+  sheet['B' + (lastData + 9)].s = { ...base, alignment: { horizontal: 'center' } };
   return sheet;
 }
 
@@ -105,7 +155,7 @@ export async function GET(request: Request) {
         XLSX.utils.book_append_sheet(workbook, makeSheet(items, title, items[0].academicYear), safeSheetName(classroom.name));
       }
     }
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true, cellDates: true });
     const scope = params.get('classId') ? 'lop' : params.get('grade') ? 'khoi-' + params.get('grade') : params.get('campusId') ? 'co-so' : 'toan-trung-tam';
     return new NextResponse(buffer, { headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
