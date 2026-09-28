@@ -61,7 +61,6 @@ export function ReportsClient() {
   useEffect(() => { loadUnmatchedTransactions(); }, [loadUnmatchedTransactions]);
 
   const refreshSepayReport = () => {
-    setImportReviewRows([]);
     loadUnmatchedTransactions();
   };
 
@@ -291,13 +290,13 @@ export function ReportsClient() {
         </CardContent>
       </Card>
 
-      {!!importReviewRows.length && <Card className="border-yellow-300">
+      {!!unmatchedTransactions.length && <Card className="border-yellow-300">
         <CardHeader>
-          <CardTitle>Giao dịch Excel cần cân nhắc</CardTitle>
-          <p className="text-sm text-muted-foreground">Chỉ bấm xác nhận khi đã kiểm tra đúng họ tên, lớp và số tiền.</p>
+          <CardTitle>Chờ xem xét / Xác nhận thủ công</CardTitle>
+          <p className="text-sm text-muted-foreground">Các giao dịch này được lưu lại sau khi làm mới. Chỉ xác nhận khi đã kiểm tra đúng họ tên, lớp và số tiền.</p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {importReviewRows.map((row: any) => <div key={row.transactionId} className="rounded-lg border p-3">
+          {unmatchedTransactions.map((row: any) => <div key={row.id} className="rounded-lg border p-3">
             <p className="text-sm">{row.content}</p>
             <p className="mt-1 text-sm text-red-600">{row.reason}</p>
             <div className="mt-2 flex flex-wrap gap-2">
