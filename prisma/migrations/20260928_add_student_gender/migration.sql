@@ -1,1 +1,1 @@
-ALTER TABLE "students" ADD COLUMN "gender" TEXT;\n
+ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "gender" TEXT;
