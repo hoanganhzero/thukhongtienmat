@@ -20,6 +20,8 @@ export function ReportsClient() {
   const [filterCampus, setFilterCampus] = useState('all');
   const [filterClass, setFilterClass] = useState('all');
   const [page, setPage] = useState(1);
+  const [unmatchedTransactions, setUnmatchedTransactions] = useState<any[]>([]);
+  const [unmatchedTotal, setUnmatchedTotal] = useState(0);
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
@@ -38,6 +40,17 @@ export function ReportsClient() {
 
   useEffect(() => { load(); }, [load]);
 
+  const loadUnmatchedTransactions = useCallback(() => {
+    fetch('/api/bank-transactions?limit=200')
+      .then(r => r.json())
+      .then(d => {
+        setUnmatchedTransactions(d?.transactions ?? []);
+        setUnmatchedTotal(d?.total ?? 0);
+      });
+  }, []);
+
+  useEffect(() => { loadUnmatchedTransactions(); }, [loadUnmatchedTransactions]);
+
   const handleExport = () => {
     const params = new URLSearchParams();
     if (filterStatus !== 'all') params.set('status', filterStatus);
@@ -48,6 +61,29 @@ export function ReportsClient() {
     a.href = `/api/reports/export?${params}`;
     a.download = 'bao-cao-hoc-phi.xlsx';
     a.click();
+  };
+
+  const exportUnmatchedCsv = () => {
+    const rows = unmatchedTransactions.map((transaction: any) => [
+      transaction.transactionDate ? new Date(transaction.transactionDate).toLocaleString('vi-VN') : '',
+      transaction.gateway ?? '',
+      transaction.accountNumber ?? '',
+      transaction.transferAmount ?? 0,
+      transaction.content ?? '',
+      transaction.referenceCode ?? transaction.providerTransactionId ?? '',
+      transaction.reason ?? '',
+    ]);
+    const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const csv = '\ufeff' + [
+      ['Thời gian', 'Ngân hàng', 'Tài khoản nhận', 'Số tiền', 'Nội dung chuyển khoản', 'Mã tham chiếu', 'Lý do chưa xác nhận'],
+      ...rows,
+    ].map(row => row.map(quote).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'giao-dich-sepay-chua-xac-nhan.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const totalAmount = assignments.reduce((sum: number, a: any) => sum + (a?.amount ?? 0), 0);
@@ -113,6 +149,48 @@ export function ReportsClient() {
                   <TableCell>{a?.status === 'confirmed' && <Button variant="outline" size="sm" onClick={() => window.open(`/api/receipts/${a.id}`, '_blank')}><ReceiptText className="mr-1 h-4 w-4" /> Xuất</Button>}</TableCell>
                 </TableRow>
               ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div>
+            <CardTitle>Giao dịch SePay chưa xác nhận</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{unmatchedTotal} giao dịch chưa khớp đúng nội dung hoặc khoản thu</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={loadUnmatchedTransactions}>Làm mới</Button>
+            <Button variant="outline" disabled={!unmatchedTransactions.length} onClick={exportUnmatchedCsv}><Download className="mr-1 h-4 w-4" /> Xuất CSV</Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Thời gian</TableHead>
+                <TableHead>Ngân hàng</TableHead>
+                <TableHead>Tài khoản nhận</TableHead>
+                <TableHead>Số tiền</TableHead>
+                <TableHead className="min-w-[320px]">Nội dung chuyển khoản</TableHead>
+                <TableHead>Mã tham chiếu</TableHead>
+                <TableHead className="min-w-[240px]">Lý do chưa xác nhận</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {unmatchedTransactions.map((transaction: any) => (
+                <TableRow key={transaction.id}>
+                  <TableCell className="whitespace-nowrap text-sm">{transaction.transactionDate ? new Date(transaction.transactionDate).toLocaleString('vi-VN') : '—'}</TableCell>
+                  <TableCell>{transaction.gateway ?? 'SePay'}</TableCell>
+                  <TableCell className="font-mono text-sm">{transaction.accountNumber}</TableCell>
+                  <TableCell className="font-mono">{formatCurrency(transaction.transferAmount ?? 0)}</TableCell>
+                  <TableCell className="text-sm">{transaction.content}</TableCell>
+                  <TableCell className="font-mono text-xs">{transaction.referenceCode ?? transaction.providerTransactionId}</TableCell>
+                  <TableCell className="text-sm text-red-600">{transaction.reason}</TableCell>
+                </TableRow>
+              ))}
+              {!unmatchedTransactions.length && <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">Không có giao dịch SePay chưa xác nhận</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
