@@ -19,6 +19,14 @@ type SePayPayload = {
   referenceCode?: string;
 };
 
+function parseSePayDate(value?: string) {
+  if (!value) return null;
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized);
+  const parsed = new Date(hasZone ? normalized : normalized + '+07:00');
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function isValidSignature(rawBody: string, request: Request) {
   const secret = process.env.SEPAY_WEBHOOK_SECRET;
   const signature = request.headers.get('x-sepay-signature') ?? '';
@@ -51,6 +59,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: 'Invalid transaction' }, { status: 400 });
   }
 
+  const transactionDate = parseSePayDate(payload.transactionDate);
   let transaction;
   try {
     transaction = await prisma.bankTransaction.upsert({
@@ -61,7 +70,7 @@ export async function POST(request: Request) {
         providerTransactionId,
         gateway: payload.gateway,
         accountNumber,
-        transactionDate: payload.transactionDate ? new Date(payload.transactionDate) : null,
+        transactionDate,
         content: payload.content ?? payload.description ?? '',
         transferType: payload.transferType,
         transferAmount,
@@ -96,7 +105,7 @@ export async function POST(request: Request) {
   if (matchedAssignments.length) {
     const assignment = matchedAssignments[0];
     await prisma.$transaction([
-      prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed', paidAt: new Date() } }),
+      prisma.feeAssignment.updateMany({ where: { id: { in: matchedAssignments.map((item) => item.id) } }, data: { status: 'confirmed', paidAt: transactionDate ?? new Date() } }),
       prisma.bankTransaction.update({
         where: { provider_providerTransactionId: { provider: 'sepay', providerTransactionId } },
         data: { matchedAssignmentId: assignment.id, status: 'matched' },
