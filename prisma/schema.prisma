@@ -54,6 +54,7 @@ model Student {
   deletedAt      DateTime?
   feeAssignments FeeAssignment[]
   notifications  Notification[]
+  feedbacks      Feedback[]
 
   @@index([classId])
   @@index([phone])
@@ -95,6 +96,7 @@ model FeeAssignment {
   updatedAt     DateTime       @updatedAt
   paymentProofs PaymentProof[]
   notifications Notification[]
+  feedbacks     Feedback[]
 
   @@index([studentId])
   @@index([feeTypeId])
@@ -195,6 +197,28 @@ model AdminClass {
   @@unique([adminId, classId])
   @@index([classId])
   @@map("admin_classes")
+}
+
+model Feedback {
+  id              String         @id @default(cuid())
+  studentId       String
+  student         Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feeAssignmentId String?
+  feeAssignment   FeeAssignment? @relation(fields: [feeAssignmentId], references: [id], onDelete: SetNull)
+  senderId        String
+  senderRole      String
+  message         String
+  status          String         @default("pending")
+  reply           String?
+  handledBy       String?
+  handledAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([feeAssignmentId])
+  @@index([status])
+  @@map("feedbacks")
 }
 
 // NextAuth required tables
