@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search, Upload, Download, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { normalizeDateOfBirth, parseStudentRows } from '@/lib/student-import';
-import { formatDate } from '@/lib/date-format';
+import { formatDate, parseDateInput } from '@/lib/date-format';
 
 export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const isTeacher = adminRole === 'teacher';
@@ -28,7 +28,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' });
+  const emptyForm = { studentCode: '', cccd: '', fullName: '', classId: '', dateOfBirth: '', gender: '', phone: '', parentPhone: '', zaloPhone: '', password: '' };
+  const [form, setForm] = useState(emptyForm);
   const [allClasses, setAllClasses] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -62,7 +63,9 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const handleSave = async () => {
     const method = editing ? 'PUT' : 'POST';
     const url = editing ? `/api/students/${editing.id}` : '/api/students';
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    const birthDate = form.dateOfBirth.trim() ? parseDateInput(form.dateOfBirth) : null;
+    if (form.dateOfBirth.trim() && !birthDate) return toast.error('Ngày sinh phải đúng định dạng dd/mm/yyyy');
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, dateOfBirth: birthDate }) });
     if (res.ok) { toast.success(editing ? 'Đã cập nhật' : 'Đã thêm học sinh'); setOpen(false); setEditing(null); loadStudents(); }
     else { const err = await res.json().catch(() => ({})); toast?.error?.(err?.error ?? 'Lỗi'); }
   };
@@ -150,6 +153,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       'Cơ sở': allClasses[0]?.campus?.name ?? 'Tên cơ sở',
       'Năm học': allClasses[0]?.schoolYear ?? '2025-2026',
       'Ngày sinh': '15/01/2010',
+      'Giới tính': 'Nam',
       'SĐT': '0901234567',
       'SĐT phụ huynh': '0909876543',
       Zalo: '0909876543',
@@ -212,7 +216,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
             ? <Button variant="outline" onClick={restoreSelected}><RotateCcw className="h-4 w-4 mr-1" /> Khôi phục đã chọn ({selectedIds.length})</Button>
             : <Button variant="destructive" onClick={deleteSelected}><Trash2 className="h-4 w-4 mr-1" /> Xóa đã chọn ({selectedIds.length})</Button>)}
           {!isTeacher && <Button variant="outline" onClick={() => { setShowDeleted((value) => !value); setPage(1); setSelectedIds([]); }}>{showDeleted ? 'Danh sách đang dùng' : 'Học sinh đã xóa'}</Button>}
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm({ studentCode: '', cccd: '', fullName: '', classId: '', phone: '', parentPhone: '', zaloPhone: '', password: '' }); } }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> Thêm học sinh</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? 'Sửa học sinh' : 'Thêm học sinh'}</DialogTitle></DialogHeader>
@@ -226,6 +230,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
                   <SelectContent>{allClasses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name} - {c?.campus?.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              <div><Label>Ngày sinh (dd/mm/yyyy)</Label><Input value={form.dateOfBirth} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} placeholder="31/12/2010" className="mt-1" /></div>
+              <div><Label>Giới tính</Label><Select value={form.gender || 'unknown'} onValueChange={v => setForm({ ...form, gender: v === 'unknown' ? '' : v })}><SelectTrigger className="mt-1"><SelectValue placeholder="Chọn giới tính" /></SelectTrigger><SelectContent><SelectItem value="unknown">Chưa có</SelectItem><SelectItem value="Nam">Nam</SelectItem><SelectItem value="Nữ">Nữ</SelectItem></SelectContent></Select></div>
               <div><Label>SĐT</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="mt-1" /></div>
               <div><Label>SĐT Phụ huynh</Label><Input value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} className="mt-1" /></div>
               <div><Label>Zalo</Label><Input value={form.zaloPhone} onChange={e => setForm({ ...form, zaloPhone: e.target.value })} className="mt-1" /></div>
@@ -263,6 +269,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
                 <TableHead>Mã HS</TableHead>
                 <TableHead>CCCD</TableHead>
                 <TableHead>Họ tên</TableHead>
+                <TableHead>Ngày sinh</TableHead>
+                <TableHead>Giới tính</TableHead>
                 <TableHead>Lớp</TableHead>
                 <TableHead>Cơ sở</TableHead>
                 <TableHead>SĐT</TableHead>
@@ -277,6 +285,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
                   <TableCell className="font-mono text-sm">{s?.studentCode}</TableCell>
                   <TableCell className="font-mono text-sm">{s?.cccd ?? '—'}</TableCell>
                   <TableCell className="font-medium">{s?.fullName}</TableCell>
+                  <TableCell>{formatDate(s?.dateOfBirth) || '—'}</TableCell>
+                  <TableCell>{s?.gender || '—'}</TableCell>
                   <TableCell>{s?.class?.name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{s?.class?.campus?.name}</TableCell>
                   <TableCell className="text-sm">{s?.phone}</TableCell>
@@ -284,7 +294,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
                     {!isTeacher && (showDeleted
                       ? <Button variant="outline" size="sm" onClick={async () => { await fetch(`/api/students/${s.id}`, { method: 'PATCH' }); loadStudents(); }}><RotateCcw className="h-4 w-4 mr-1" /> Khôi phục</Button>
                       : <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, cccd: s.cccd ?? '', fullName: s.fullName, classId: s.classId, phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '', password: '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(s); setForm({ studentCode: s.studentCode, cccd: s.cccd ?? '', fullName: s.fullName, classId: s.classId, dateOfBirth: formatDate(s.dateOfBirth), gender: s.gender ?? '', phone: s.phone ?? '', parentPhone: s.parentPhone ?? '', zaloPhone: s.zaloPhone ?? '', password: '' }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={async () => { if (!confirm('Đưa học sinh vào thùng rác?')) return; await fetch(`/api/students/${s.id}`, { method: 'DELETE' }); loadStudents(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>)
                     }
