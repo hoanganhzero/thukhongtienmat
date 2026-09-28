@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const page = Math.max(1, Number(searchParams.get('page') ?? 1));
     const limit = Math.min(200, Math.max(1, Number(searchParams.get('limit') ?? 100)));
     const where = {
-      provider: 'sepay',
+      provider: { in: ['sepay', 'sepay-excel'] },
       status: 'unmatched',
       accountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber,
     };
