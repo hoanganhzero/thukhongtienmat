@@ -62,6 +62,7 @@ export function parseStudentRows(rows: Record<string, unknown>[], classes: Schoo
       parentPhone: text(row['SĐT phụ huynh'] ?? row.parentPhone),
       zaloPhone: text(row.Zalo ?? row.zaloPhone),
       dateOfBirth: normalizeDateOfBirth(row['Ngày sinh'] ?? row.dateOfBirth),
+      gender: text(row['Giới tính'] ?? row.gender),
     });
   });
 
