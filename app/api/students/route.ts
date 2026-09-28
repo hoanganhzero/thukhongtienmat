@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     if (search) {
       where.OR = [
         { studentCode: { contains: search } },
+        { cccd: { contains: search } },
         { fullName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
       ];
