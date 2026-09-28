@@ -60,6 +60,11 @@ export function ReportsClient() {
 
   useEffect(() => { loadUnmatchedTransactions(); }, [loadUnmatchedTransactions]);
 
+  const refreshSepayReport = () => {
+    setImportReviewRows([]);
+    loadUnmatchedTransactions();
+  };
+
   const loadSummary = useCallback(() => {
     const params = new URLSearchParams();
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
@@ -314,7 +319,7 @@ export function ReportsClient() {
           <div className="flex gap-2 flex-wrap justify-end">
             <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={event => importTransactions(event.target.files?.[0])} />
             <Button variant="outline" disabled={importing} onClick={() => importInputRef.current?.click()}><Upload className="mr-1 h-4 w-4" /> {importing ? 'Đang đối chiếu...' : 'Nhập Excel MB Bank'}</Button>
-            <Button variant="outline" onClick={loadUnmatchedTransactions}>Làm mới</Button>
+            <Button variant="outline" onClick={refreshSepayReport}>Làm mới</Button>
             <Button variant="outline" disabled={!unmatchedTransactions.length} onClick={() => { window.location.href = '/api/bank-transactions/export-review'; }}><Download className="mr-1 h-4 w-4" /> Xuất Excel cần xem xét</Button>
           </div>
         </CardHeader>
