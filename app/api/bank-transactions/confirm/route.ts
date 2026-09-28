@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Không có quyền' }, { status: 403 });
     }
     const { transactionId, assignmentId } = await request.json();
-    const transaction = await prisma.bankTransaction.findUnique({ where: { id: String(transactionId ?? '') } });
+    const transaction = await prisma.bankTransaction.findFirst({ where: { providerTransactionId: String(transactionId ?? ''), provider: { in: ['sepay', 'sepay-excel'] } } });
     const assignment = await prisma.feeAssignment.findUnique({
       where: { id: String(assignmentId ?? '') },
       include: { student: { include: { class: true } }, feeType: true },
