@@ -22,6 +22,7 @@ export function ReportsClient() {
   const [page, setPage] = useState(1);
   const [unmatchedTransactions, setUnmatchedTransactions] = useState<any[]>([]);
   const [unmatchedTotal, setUnmatchedTotal] = useState(0);
+  const [summary, setSummary] = useState<any>({ overall: {}, campuses: [], classes: [] });
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
@@ -50,6 +51,17 @@ export function ReportsClient() {
   }, []);
 
   useEffect(() => { loadUnmatchedTransactions(); }, [loadUnmatchedTransactions]);
+
+  const loadSummary = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filterCampus !== 'all') params.set('campusId', filterCampus);
+    if (filterClass !== 'all') params.set('classId', filterClass);
+    fetch(`/api/reports/summary?${params}`)
+      .then(r => r.json())
+      .then(d => setSummary(d?.overall ? d : { overall: {}, campuses: [], classes: [] }));
+  }, [filterCampus, filterClass]);
+
+  useEffect(() => { loadSummary(); }, [loadSummary]);
 
   const handleExport = () => {
     const params = new URLSearchParams();
@@ -86,15 +98,15 @@ export function ReportsClient() {
     URL.revokeObjectURL(url);
   };
 
-  const totalAmount = assignments.reduce((sum: number, a: any) => sum + (a?.amount ?? 0), 0);
-  const confirmedAmount = assignments.filter((a: any) => a?.status === 'confirmed').reduce((sum: number, a: any) => sum + (a?.amount ?? 0), 0);
+  const totalAmount = summary?.overall?.requiredAmount ?? 0;
+  const confirmedAmount = summary?.overall?.collectedAmount ?? 0;
 
   return (
     <div className="p-6 max-w-[1200px] space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Báo cáo Thống kê</h1>
-          <p className="text-sm text-muted-foreground">Thống kê tổng hợp thu học phí</p>
+          <p className="text-sm text-muted-foreground">BHTT qua MB Bank 0335127226 — NGUYEN THI PHUONG THAO</p>
         </div>
         <Button onClick={handleExport}><Download className="h-4 w-4 mr-1" /> Xuất Excel</Button>
       </div>
@@ -119,6 +131,33 @@ export function ReportsClient() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả</SelectItem><SelectItem value="pending">Chưa đóng</SelectItem><SelectItem value="uploaded">Đã gửi ảnh</SelectItem><SelectItem value="confirmed">Đã xác nhận</SelectItem><SelectItem value="exempt">Không phải đóng</SelectItem><SelectItem value="rejected">Từ chối</SelectItem></SelectContent>
         </Select>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader><CardTitle>Thống kê theo cơ sở</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Cơ sở</TableHead><TableHead>Đã đóng</TableHead><TableHead>Tổng HS</TableHead><TableHead>Đã thu</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {(summary?.campuses ?? []).map((row: any) => <TableRow key={row.id}><TableCell>{row.name}</TableCell><TableCell>{row.confirmed}</TableCell><TableCell>{row.total}</TableCell><TableCell className="font-mono">{formatCurrency(row.collectedAmount)}</TableCell></TableRow>)}
+                {!(summary?.campuses ?? []).length && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Chưa có dữ liệu</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Thống kê theo lớp</CardTitle></CardHeader>
+          <CardContent className="p-0 overflow-x-auto max-h-[420px]">
+            <Table>
+              <TableHeader><TableRow><TableHead>Lớp</TableHead><TableHead>Cơ sở</TableHead><TableHead>Đã đóng</TableHead><TableHead>Tổng HS</TableHead><TableHead>Đã thu</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {(summary?.classes ?? []).map((row: any) => <TableRow key={row.id}><TableCell>{row.name}</TableCell><TableCell>{row.campus}</TableCell><TableCell>{row.confirmed}</TableCell><TableCell>{row.total}</TableCell><TableCell className="font-mono">{formatCurrency(row.collectedAmount)}</TableCell></TableRow>)}
+                {!(summary?.classes ?? []).length && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Chưa có dữ liệu</TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
