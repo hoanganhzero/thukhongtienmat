@@ -33,7 +33,7 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     item.student.fullName,
     item.student.class.name,
     formatDate(item.student.dateOfBirth),
-    '',
+    item.student.gender ?? '',
     Number(item.amount),
     item.paidAt ? 'Đã đóng ngày ' + formatDate(item.paidAt) : 'Đã xác nhận',
   ]));
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       grouped.set(item.student.class.id, list);
     }
     if (!assignments.length) {
-      XLSX.utils.book_append_sheet(workbook, makeSheet([], 'KHÔNG CÓ HỌC SINH ĐÃ ĐÓNG TRONG PHẠM VI ĐÃ CHỌN', '2025-2026'), 'BHTT');
+      XLSX.utils.book_append_sheet(workbook, makeSheet([], 'KHÔNG CÓ HỌC SINH ĐÃ ĐÓNG TRONG PHẠM VI ĐÃ CHỌN', '2026-2027'), 'BHTT');
     } else {
       for (const items of grouped.values()) {
         const classroom = items[0].student.class;
