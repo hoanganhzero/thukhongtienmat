@@ -179,7 +179,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     <div className="p-6 max-w-[1200px] space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{showDeleted ? 'Học sinh đã xóa' : (isTeacher ? 'Học sinh lớp chủ nhiệm' : 'Quản lý Học sinh')}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{showDeleted ? 'Học sinh đã xóa' : (isTeacher ? 'Tra cứu học sinh lớp mình' : 'Quản lý Học sinh')}</h1>
           <p className="text-sm text-muted-foreground">Tổng cộng {total} học sinh</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -233,7 +233,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
         </Select>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Tìm mã HS, tên, SĐT..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
+          <Input placeholder="Tìm mã HS, CCCD, họ tên hoặc SĐT..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
         </div>
       </div>
 
