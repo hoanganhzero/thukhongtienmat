@@ -20,7 +20,7 @@ export default function HomePage() {
               <LogIn className="h-4 w-4" /> Học sinh
             </Link>
             <Link href="/gvcn" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-              <UserRoundCheck className="h-4 w-4" /> GVCN
+              <UserRoundCheck className="h-4 w-4" /> Tra cứu nhanh GVCN
             </Link>
             <Link href="/admin/login" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
               <Shield className="h-4 w-4" /> Cán bộ
