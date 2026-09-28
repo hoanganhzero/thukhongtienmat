@@ -19,6 +19,8 @@ export function ReportsClient() {
   const [filterFeeType, setFilterFeeType] = useState('all');
   const [filterCampus, setFilterCampus] = useState('all');
   const [filterClass, setFilterClass] = useState('all');
+  const [filterGrade, setFilterGrade] = useState('all');
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [page, setPage] = useState(1);
   const [unmatchedTransactions, setUnmatchedTransactions] = useState<any[]>([]);
   const [unmatchedTotal, setUnmatchedTotal] = useState(0);
@@ -39,8 +41,9 @@ export function ReportsClient() {
     if (filterFeeType !== 'all') params.set('feeTypeId', filterFeeType);
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
     if (filterClass !== 'all') params.set('classId', filterClass);
+    if (filterGrade !== 'all') params.set('grade', filterGrade);
     fetch(`/api/fee-assignments?${params}`).then(r => r.json()).then(d => { setAssignments(d?.assignments ?? []); setTotal(d?.total ?? 0); });
-  }, [page, filterStatus, filterFeeType, filterCampus, filterClass]);
+  }, [page, filterStatus, filterFeeType, filterCampus, filterClass, filterGrade]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -59,12 +62,23 @@ export function ReportsClient() {
     const params = new URLSearchParams();
     if (filterCampus !== 'all') params.set('campusId', filterCampus);
     if (filterClass !== 'all') params.set('classId', filterClass);
+    if (filterGrade !== 'all') params.set('grade', filterGrade);
     fetch(`/api/reports/summary?${params}`)
       .then(r => r.json())
       .then(d => setSummary(d?.overall ? d : { overall: {}, campuses: [], classes: [] }));
-  }, [filterCampus, filterClass]);
+  }, [filterCampus, filterClass, filterGrade]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = window.setInterval(() => {
+      load();
+      loadSummary();
+      loadUnmatchedTransactions();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [autoRefresh, load, loadSummary, loadUnmatchedTransactions]);
 
   const importTransactions = async (file?: File) => {
     if (!file) return;
@@ -150,6 +164,14 @@ export function ReportsClient() {
     URL.revokeObjectURL(url);
   };
 
+  const exportBhttList = () => {
+    const params = new URLSearchParams();
+    if (filterCampus !== 'all') params.set('campusId', filterCampus);
+    if (filterClass !== 'all') params.set('classId', filterClass);
+    if (filterGrade !== 'all') params.set('grade', filterGrade);
+    window.location.href = `/api/reports/bhtt-list?${params}`;
+  };
+
   const totalAmount = summary?.overall?.requiredAmount ?? 0;
   const confirmedAmount = summary?.overall?.collectedAmount ?? 0;
 
@@ -160,7 +182,14 @@ export function ReportsClient() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Báo cáo Thống kê</h1>
           <p className="text-sm text-muted-foreground">BHTT qua MB Bank 0335127226 — NGUYEN THI PHUONG THAO</p>
         </div>
-        <Button onClick={handleExport}><Download className="h-4 w-4 mr-1" /> Xuất Excel</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+            <input type="checkbox" checked={autoRefresh} onChange={event => setAutoRefresh(event.target.checked)} />
+            Tự cập nhật 30 giây
+          </label>
+          <Button variant="outline" onClick={exportBhttList}><Download className="h-4 w-4 mr-1" /> Xuất DS BHTT</Button>
+          <Button onClick={handleExport}><Download className="h-4 w-4 mr-1" /> Xuất báo cáo</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -170,11 +199,15 @@ export function ReportsClient() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
+        <Select value={filterGrade} onValueChange={v => { setFilterGrade(v); setFilterClass('all'); setPage(1); }}>
+          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">Tất cả khối</SelectItem><SelectItem value="10">Khối 10</SelectItem><SelectItem value="11">Khối 11</SelectItem><SelectItem value="12">Khối 12</SelectItem></SelectContent>
+        </Select>
         <Select value={filterCampus} onValueChange={v => { setFilterCampus(v); setFilterClass('all'); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả cơ sở</SelectItem>{campuses.map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name}</SelectItem>)}</SelectContent>
         </Select>
-        <Select value={filterClass} onValueChange={v => { setFilterClass(v); setPage(1); }}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả lớp</SelectItem>{classes.filter((item: any) => filterCampus === 'all' || item.campusId === filterCampus).map((item: any) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>
+        <Select value={filterClass} onValueChange={v => { setFilterClass(v); setPage(1); }}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tất cả lớp</SelectItem>{classes.filter((item: any) => (filterCampus === 'all' || item.campusId === filterCampus) && (filterGrade === 'all' || String(item.name ?? '').startsWith(filterGrade))).map((item: any) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select>
         <Select value={filterFeeType} onValueChange={v => { setFilterFeeType(v); setPage(1); }}>
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">Tất cả khoản</SelectItem>{feeTypes.map((f: any) => <SelectItem key={f?.id} value={f?.id ?? ''}>{f?.name}</SelectItem>)}</SelectContent>
@@ -274,7 +307,7 @@ export function ReportsClient() {
             <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={event => importTransactions(event.target.files?.[0])} />
             <Button variant="outline" disabled={importing} onClick={() => importInputRef.current?.click()}><Upload className="mr-1 h-4 w-4" /> {importing ? 'Đang đối chiếu...' : 'Nhập Excel MB Bank'}</Button>
             <Button variant="outline" onClick={loadUnmatchedTransactions}>Làm mới</Button>
-            <Button variant="outline" disabled={!unmatchedTransactions.length} onClick={exportUnmatchedCsv}><Download className="mr-1 h-4 w-4" /> Xuất CSV</Button>
+            <Button variant="outline" disabled={!unmatchedTransactions.length} onClick={() => { window.location.href = '/api/bank-transactions/export-review'; }}><Download className="mr-1 h-4 w-4" /> Xuất Excel cần xem xét</Button>
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
