@@ -41,7 +41,7 @@ export function parseStudentRows(rows: Record<string, unknown>[], classes: Schoo
   rows.forEach((row, index) => {
     const studentCode = text(row['Mã HS'] ?? row['Mã học sinh'] ?? row.studentCode);
     const fullName = text(row['Họ tên'] ?? row['Họ và tên'] ?? row.fullName);
-    const classValue = text(row['Lớp'] ?? row['Mã lớp'] ?? row.className ?? row.classId);
+    const classValue = text(row['Lớp'] ?? row['Lớp học'] ?? row['Mã lớp'] ?? row.className ?? row.classId);
     const campusValue = text(row['Cơ sở'] ?? row['Điểm trường'] ?? row.campusName ?? row.campusId).toLowerCase();
     const schoolYear = text(row['Năm học'] ?? row.schoolYear).toLowerCase();
     const classId = (campusValue && schoolYear ? classMap.get(`${classValue.toLowerCase()}|${campusValue}|${schoolYear}`) : undefined)
