@@ -80,8 +80,14 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const existingTransaction = await prisma.bankTransaction.findUnique({
-        where: { provider_providerTransactionId: { provider: 'sepay-excel', providerTransactionId: transactionId } },
+      const existingTransaction = await prisma.bankTransaction.findFirst({
+        where: {
+          accountNumber,
+          OR: [
+            { providerTransactionId: transactionId },
+            ...(referenceCode ? [{ referenceCode }] : []),
+          ],
+        },
       });
       if (existingTransaction?.status === 'matched') {
         alreadyConfirmed += 1;
