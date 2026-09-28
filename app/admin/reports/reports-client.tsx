@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency } from '@/lib/utils';
-import { Download, ReceiptText } from 'lucide-react';
+import { Download, ReceiptText, Upload } from 'lucide-react';
 
 export function ReportsClient() {
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -23,6 +23,8 @@ export function ReportsClient() {
   const [unmatchedTransactions, setUnmatchedTransactions] = useState<any[]>([]);
   const [unmatchedTotal, setUnmatchedTotal] = useState(0);
   const [summary, setSummary] = useState<any>({ overall: {}, campuses: [], classes: [] });
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/fee-types').then(r => r.json()).then(d => setFeeTypes(Array.isArray(d) ? d : []));
@@ -62,6 +64,39 @@ export function ReportsClient() {
   }, [filterCampus, filterClass]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
+
+  const importTransactions = async (file?: File) => {
+    if (!file) return;
+    setImporting(true);
+    const send = async (commit: boolean) => {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('commit', String(commit));
+      const response = await fetch('/api/bank-transactions/import', { method: 'POST', body: form });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error ?? 'Không thể đối chiếu tệp');
+      return data;
+    };
+    try {
+      const preview = await send(false);
+      const s = preview.summary;
+      const approved = confirm(
+        `Đối chiếu ${s.total} giao dịch:\n- Có thể xác nhận: ${s.matched}\n- Đã xác nhận trước: ${s.alreadyConfirmed}\n- Cần xem xét: ${s.review}\n- Không hợp lệ: ${s.invalid}\n\nChỉ các dòng khớp duy nhất họ tên và lớp mới được xác nhận. Tiếp tục?`
+      );
+      if (approved) {
+        const result = await send(true);
+        alert(`Đã xác nhận ${result.summary.matched} học sinh. ${result.summary.review} giao dịch được giữ lại để xem xét.`);
+        load();
+        loadSummary();
+        loadUnmatchedTransactions();
+      }
+    } catch (error: any) {
+      alert(error?.message ?? 'Không thể nhập tệp giao dịch');
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  };
 
   const handleExport = () => {
     const params = new URLSearchParams();
@@ -199,7 +234,9 @@ export function ReportsClient() {
             <CardTitle>Giao dịch SePay chưa xác nhận</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{unmatchedTotal} giao dịch chưa khớp đúng nội dung hoặc khoản thu</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={event => importTransactions(event.target.files?.[0])} />
+            <Button variant="outline" disabled={importing} onClick={() => importInputRef.current?.click()}><Upload className="mr-1 h-4 w-4" /> {importing ? 'Đang đối chiếu...' : 'Nhập Excel MB Bank'}</Button>
             <Button variant="outline" onClick={loadUnmatchedTransactions}>Làm mới</Button>
             <Button variant="outline" disabled={!unmatchedTransactions.length} onClick={exportUnmatchedCsv}><Download className="mr-1 h-4 w-4" /> Xuất CSV</Button>
           </div>
