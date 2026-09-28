@@ -99,6 +99,34 @@ export async function POST(request: Request) {
 
       if (!className || !assignment) {
         review += 1;
+        if (commit) {
+          await prisma.bankTransaction.upsert({
+            where: { provider_providerTransactionId: { provider: 'sepay-excel', providerTransactionId: transactionId } },
+            update: {
+              accountNumber,
+              transactionDate: parseDate(read(row, ['Thời gian', 'Thoi gian'])),
+              content: rawContent,
+              transferType: 'in',
+              transferAmount: amount,
+              referenceCode,
+              status: 'unmatched',
+              rawPayload: row as any,
+            },
+            create: {
+              provider: 'sepay-excel',
+              providerTransactionId: transactionId,
+              gateway: String(read(row, ['Ngân hàng', 'Ngan hang']) ?? 'MBBank'),
+              accountNumber,
+              transactionDate: parseDate(read(row, ['Thời gian', 'Thoi gian'])),
+              content: rawContent,
+              transferType: 'in',
+              transferAmount: amount,
+              referenceCode,
+              status: 'unmatched',
+              rawPayload: row as any,
+            },
+          });
+        }
         const possible = candidates.slice(0, 5).map((item) => ({
           assignmentId: item.id,
           studentCode: item.student.studentCode,
