@@ -19,7 +19,7 @@ type SePayPayload = {
   referenceCode?: string;
 };
 
-function parseSePayDate(value?: string) {
+export function parseSePayDate(value?: string) {
   if (!value) return null;
   const normalized = value.includes('T') ? value : value.replace(' ', 'T');
   const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized);
