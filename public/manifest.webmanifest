@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "Thu BHTT/BHYT",
+  "short_name": "Thu Tân Ninh",
+  "description": "Tra cứu và thanh toán các khoản thu của Trung tâm GDNN-GDTX Khu vực Tân Ninh",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0fdfa",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
