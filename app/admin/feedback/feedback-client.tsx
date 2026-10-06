@@ -66,7 +66,7 @@ export function FeedbackClient({ session }: { session: any }) {
           <p className="font-semibold">{item.student?.fullName} — {item.student?.class?.name}</p>
           <span className="text-sm">{item.status === 'resolved' ? '✅ Đã xử lý' : item.status === 'rejected' ? 'Đã từ chối' : '⏳ Chờ xử lý'}</span>
         </div>
-        <p className="text-sm text-muted-foreground">{item.student?.studentCode} • {item.feeAssignment?.feeType?.name ?? 'Phản hồi chung'} • Người gửi: {item.senderRole}</p>
+        <p className="text-sm text-muted-foreground">{item.student?.studentCode} • {item.feeAssignment?.feeType?.name ?? 'Phản hồi chung'} • Người gửi: {item.senderRole === 'teacher_lookup_unverified' ? 'Tra cứu nhanh GVCN (chưa xác thực)' : item.senderRole === 'student_lookup' ? 'Tra cứu nhanh học sinh' : item.senderRole}</p>
         <p className="rounded-md bg-muted p-3 text-sm">{item.message}</p>
         {item.reply && <p className="rounded-md bg-green-50 p-3 text-sm text-green-800"><b>Phản hồi:</b> {item.reply}</p>}
         {canHandle && item.status === 'pending' && <div className="flex gap-2">
