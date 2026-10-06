@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo-trung-tam-tan-ninh.webp',
     shortcut: '/logo-trung-tam-tan-ninh.webp',
-    apple: '/logo-trung-tam-tan-ninh.webp',
+    apple: '/icon-192.png',
   },
   openGraph: {
     title: 'Thu không tiền mặt | Trung tâm GDNN-GDTX Khu vực Tân Ninh',
