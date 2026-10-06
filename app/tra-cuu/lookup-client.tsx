@@ -21,6 +21,9 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
   const [error, setError] = useState('');
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [feedbackFor, setFeedbackFor] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
 
   const doSearch = async (q: string) => {
     if (!q?.trim()) return;
@@ -48,6 +51,7 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
         if (!res.ok) return;
         const data = await res.json();
         setStudent(data);
+        setLookupToken(data?.lookupToken ?? '');
         setPaymentSuccess((data?.feeAssignments ?? []).some((fee: any) => fee.status === 'confirmed'));
       } catch {
         // Giữ nguyên dữ liệu hiện tại nếu lần cập nhật nền bị lỗi.
@@ -70,6 +74,25 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
       toast?.success?.('Đã gửi ảnh xác nhận! Vui lòng chờ nhà trường duyệt.');
     setUploadingFor(null);
     doSearch(query);
+  };
+
+  const sendFeedback = async () => {
+    if (!student?.id || !lookupToken || feedbackMessage.trim().length < 5) return;
+    setFeedbackBusy(true);
+    try {
+      const res = await fetch('/api/feedback/quick', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'student', studentId: student.id, lookupToken, feeAssignmentId: feedbackFor || null, message: feedbackMessage }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Không gửi được phản hồi');
+      setFeedbackMessage(''); setFeedbackFor('');
+      toast.success('Đã gửi phản hồi đến admin, kế toán và thủ quỹ.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không gửi được phản hồi');
+    } finally {
+      setFeedbackBusy(false);
+    }
   };
 
   const paymentGroups = student ? groupPendingFees((student.feeAssignments ?? [])
@@ -183,6 +206,15 @@ export function LookupClient({ initialQuery }: { initialQuery: string }) {
               ))}
               </>
             )}
+            <Card><CardContent className="p-5 space-y-3">
+              <h3 className="font-semibold">Gửi phản hồi cho admin, kế toán, thủ quỹ</h3>
+              <select className="w-full rounded-md border p-2" value={feedbackFor} onChange={event => setFeedbackFor(event.target.value)}>
+                <option value="">Phản hồi chung</option>
+                {(student.feeAssignments ?? []).map((fee: any) => <option key={fee.id} value={fee.id}>{fee.feeType?.name} — {formatCurrency(fee.amount)}</option>)}
+              </select>
+              <textarea className="min-h-24 w-full rounded-md border p-3" maxLength={2000} placeholder="Mô tả sai sót hoặc nội dung cần hỗ trợ..." value={feedbackMessage} onChange={event => setFeedbackMessage(event.target.value)} />
+              <Button className="w-full" disabled={feedbackBusy || feedbackMessage.trim().length < 5} onClick={sendFeedback}>{feedbackBusy ? 'Đang gửi...' : 'Gửi phản hồi'}</Button>
+            </CardContent></Card>
           </div>
         )}
       </div>
