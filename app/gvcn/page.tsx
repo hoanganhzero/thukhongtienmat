@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency } from '@/lib/utils';
+import { TeacherLookupActions } from './teacher-lookup-actions';
 
 function normalize(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').trim().toLowerCase();
@@ -89,6 +90,7 @@ export default async function TeacherLookupPage({ searchParams }: { searchParams
                 })}</tbody>
               </table>
             </CardContent>
+            <TeacherLookupActions classId={cls.id} query={query} students={cls.students} />
           </Card>;
         })}
       </main>
