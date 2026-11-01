@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { parseSePayDate } from '../app/api/webhooks/sepay/route';
+import { parseSePayDate } from '../lib/sepay-date';
 
 const parsed = parseSePayDate('2026-09-28 15:30:45');
 assert(parsed);
