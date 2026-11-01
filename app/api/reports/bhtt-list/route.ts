@@ -9,10 +9,6 @@ import * as XLSX from 'xlsx-js-style';
 const compare = (a: string, b: string) => a.localeCompare(b, 'vi', { sensitivity: 'base', numeric: true });
 const givenName = (name: string) => name.trim().split(/\s+/).at(-1) ?? '';
 
-function formatDate(value: Date | null) {
-  return value ? value.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '';
-}
-
 function moneyInWords(value: number) {
   const digit = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
   const group = (number: number, full: boolean) => {
@@ -45,7 +41,7 @@ function makeSheet(items: any[], title: string, academicYear: string) {
   const total = items.reduce((sum, item) => sum + Number(item.amount), 0);
   const rows: any[][] = [
     ['SỞ GD& ĐT TÂY NINH', '', '', 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', '', '', ''],
-    ['TRUNG TÂM GDNN - GDTX\nKHU VỰC TÂN NINH\n***', '', '', 'Độc Lập - Tự Do - Hạnh Phúc', '', '', ''],
+    ['TRUNG TÂM GDNN-GDTX KHU VỰC TÂN NINH', '', '', 'Độc Lập - Tự Do - Hạnh Phúc', '', '', ''],
     [],
     ['DANH SÁCH HỌC SINH THAM GIA BHTT', '', '', '', '', '', ''],
     [title + ' — NĂM HỌC: ' + academicYear, '', '', '', '', '', ''],
@@ -67,8 +63,10 @@ function makeSheet(items: any[], title: string, academicYear: string) {
   rows.push(['TỔNG CỘNG', '', '', '', '', items.length ? { f: `SUM(F${firstData}:F${lastData})` } : 0, '']);
   rows.push([`Bằng chữ: ${moneyInWords(total)}`, '', '', '', '', '', '']);
   rows.push([]);
-  rows.push(['', 'Người lập bảng', '', '', 'Tân Ninh, ngày ..... tháng ..... năm ........', '', '']);
-  rows.push(['', '', '', '', 'P. GIÁM ĐỐC', '', '']);
+  rows.push(['', 'Người lập bảng', '', 'P. Giám đốc', '', '', '']);
+  rows.push([]);
+  rows.push([]);
+  rows.push([]);
   rows.push([]);
   rows.push(['', 'Nguyễn Thị Phương Thảo', '', '', '', '', '']);
 
@@ -81,12 +79,10 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     { s: { r: totalRow, c: 0 }, e: { r: totalRow, c: 6 } },
     { s: { r: totalRow + 2, c: 3 }, e: { r: totalRow + 2, c: 6 } },
   ];
-  sheet['!cols'] = [{ wch: 7 }, { wch: 32 }, { wch: 10 }, { wch: 14 }, { wch: 11 }, { wch: 16 }, { wch: 18 }];
-  sheet['!rows'] = [{ hpt: 22 }, { hpt: 48 }, { hpt: 8 }, { hpt: 26 }, { hpt: 22 }, { hpt: 8 }, { hpt: 32 }];
-  sheet['!freeze'] = { xSplit: 0, ySplit: 7 } as any;
-  sheet['!autofilter'] = { ref: `A7:G${Math.max(7, lastData)}` };
+  sheet['!cols'] = [{ wch: 7.8 }, { wch: 28.8 }, { wch: 9 }, { wch: 14.1 }, { wch: 13.8 }, { wch: 10.8 }, { wch: 12.7 }];
+  sheet['!rows'] = [{}, {}, { hpt: 8 }, { hpt: 26 }, { hpt: 22 }, { hpt: 8 }, { hpt: 32 }];
   sheet['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
-  sheet['!print'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 } as any;
+  sheet['!print'] = { orientation: 'portrait', paperSize: 9, fitToWidth: 1, fitToHeight: 0 } as any;
   const border = { style: 'thin', color: { rgb: '000000' } };
   const base = { font: { name: 'Arial', sz: 11 }, alignment: { vertical: 'center' } };
   for (let row = 1; row <= rows.length; row++) for (let col = 0; col < 7; col++) {
@@ -107,9 +103,8 @@ function makeSheet(items: any[], title: string, academicYear: string) {
   }
   sheet['F' + totalRow].z = '#,##0 "đ"';
   sheet['A' + (totalRow + 1)].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center', vertical: 'center' }, border: { top: border, bottom: border, left: border, right: border } };
-  sheet['D' + (totalRow + 3)].s = { ...base, font: { name: 'Arial', sz: 11, italic: true }, alignment: { horizontal: 'center' } };
-  for (const address of ['B' + (totalRow + 4), 'D' + (totalRow + 4)]) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: address.startsWith('D') }, alignment: { horizontal: 'center' } };
-  sheet['B' + (totalRow + 6)].s = { ...base, alignment: { horizontal: 'center' } };
+  for (const address of ['B' + (totalRow + 3), 'D' + (totalRow + 3)]) sheet[address].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center' } };
+  sheet['B' + (totalRow + 8)].s = { ...base, font: { name: 'Arial', sz: 11, bold: true }, alignment: { horizontal: 'center' } };
   return sheet;
 }
 
