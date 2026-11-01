@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         accountNumber,
         transactionDate,
         content: payload.content ?? payload.description ?? '',
-        transferType: payload.transferType,
+        transferType: 'in',
         transferAmount,
         referenceCode: payload.referenceCode,
         rawPayload: payload as any,
