@@ -147,7 +147,7 @@ export async function GET(request: Request) {
       for (const items of grouped.values()) {
         const classroom = items[0].student.class;
         const title = 'LỚP ' + classroom.name + ' — ' + classroom.campus.name;
-        XLSX.utils.book_append_sheet(workbook, makeSheet(items, title, items[0].academicYear), safeSheetName(classroom.name));
+        XLSX.utils.book_append_sheet(workbook, makeSheet(items, title, '2026-2027'), safeSheetName(classroom.name));
       }
     }
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true, cellDates: true });
