@@ -264,7 +264,7 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
               {!rosterPreview.applied && <Button disabled={importing} onClick={applyRoster}>{importing ? 'Đang cập nhật...' : 'Cập nhật học sinh hợp lệ'}</Button>}
               <Button variant="ghost" onClick={() => { setRosterRows([]); setRosterPreview(null); }}>Đóng đối chiếu</Button>
             </div>
-            {(rosterPreview.absent ?? []).slice(0, 25).map((item: any) => <p key={item.id}>{item.code} — {item.name} — {item.currentClass} — {item.paid ? 'Đã đóng, giữ hồ sơ' : 'Cần xác minh nghỉ/chuyển trường'}</p>)}
+            {(rosterPreview.absent ?? []).slice(0, 25).map((item: any) => <div key={item.id} className="flex items-center gap-2 flex-wrap"><span>{item.code} — {item.name} — {item.currentClass} — {item.paid ? 'Đã đóng, giữ hồ sơ' : 'Cần xác minh nghỉ/chuyển trường'}</span><Button variant="outline" size="sm" onClick={() => { setSearch(item.code); setPage(1); setShowDeleted(false); setRosterPreview(null); }}>Xem hồ sơ</Button></div>)}
           </div>}
           {jsonImportOpen && <div className="basis-full rounded-lg border border-border bg-muted/30 p-3 space-y-2">
             <Label htmlFor="student-json-import">Dán dữ liệu JSON học sinh</Label>
