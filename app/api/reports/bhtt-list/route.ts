@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { DEFAULT_PAYMENT_ACCOUNT } from '@/lib/payment-account';
 import { teacherClassIds } from '@/lib/teacher-scope';
 import * as XLSX from 'xlsx-js-style';
 
@@ -73,7 +72,7 @@ function makeSheet(items: any[], title: string, academicYear: string) {
   rows.push([]);
   rows.push(['', 'Nguyễn Thị Phương Thảo', '', '', '', '', '']);
 
-  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  const sheet = XLSX.utils.aoa_to_sheet(rows, { cellDates: true });
   sheet['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, { s: { r: 0, c: 3 }, e: { r: 0, c: 6 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } }, { s: { r: 1, c: 3 }, e: { r: 1, c: 6 } },
@@ -103,7 +102,7 @@ function makeSheet(items: any[], title: string, academicYear: string) {
     sheet[address].s = { ...base, border: { top: border, bottom: border, left: border, right: border }, alignment: { horizontal: col === 1 ? 'left' : col === 5 ? 'right' : 'center', vertical: 'center', wrapText: true }, font: { name: 'Arial', sz: 11, bold: row === 7 || row === totalRow } };
   }
   for (let row = firstData; row <= lastData; row++) {
-    if (sheet['D' + row]) { sheet['D' + row].t = 'd'; sheet['D' + row].z = 'dd/mm/yyyy'; }
+    if (sheet['D' + row]) sheet['D' + row].z = 'dd/mm/yyyy';
     if (sheet['F' + row]) sheet['F' + row].z = '#,##0 "đ"';
   }
   sheet['F' + totalRow].z = '#,##0 "đ"';
@@ -121,7 +120,7 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const where: any = {
       status: 'confirmed',
-      feeType: { isActive: true, bankAccountNumber: DEFAULT_PAYMENT_ACCOUNT.bankAccountNumber, name: { contains: 'BHT', mode: 'insensitive' } },
+      feeType: { name: { contains: 'BHTT', mode: 'insensitive' } },
       student: { deletedAt: null },
     };
     if (user.adminRole === 'teacher') where.student.classId = { in: teacherClassIds(user) };
