@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { findPaymentMatch } from '@/lib/bank-matching';
 import { DEFAULT_PAYMENT_ACCOUNT, normalizeAccountNumber } from '@/lib/payment-account';
+import { parseSePayDate } from '@/lib/sepay-date';
 
 type SePayPayload = {
   id?: number | string;
@@ -18,14 +19,6 @@ type SePayPayload = {
   transferAmount?: number;
   referenceCode?: string;
 };
-
-export function parseSePayDate(value?: string) {
-  if (!value) return null;
-  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
-  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized);
-  const parsed = new Date(hasZone ? normalized : normalized + '+07:00');
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
 
 function isValidSignature(rawBody: string, request: Request) {
   const secret = process.env.SEPAY_WEBHOOK_SECRET;
