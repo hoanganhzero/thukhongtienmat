@@ -36,6 +36,8 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
   const [importing, setImporting] = useState(false);
   const [jsonImportOpen, setJsonImportOpen] = useState(false);
   const [jsonImport, setJsonImport] = useState('');
+  const [rosterRows, setRosterRows] = useState<any[]>([]);
+  const [rosterPreview, setRosterPreview] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,6 +78,24 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const currentRoster = String(sheet.A1?.v ?? '').trim().toUpperCase() === 'STT' && String(sheet.B1?.v ?? '').trim() === 'Mã lớp';
+      if (currentRoster) {
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+        const roster = rows.map((row) => ({
+          studentCode: String(row['Mã định danh Bộ GD&ĐT'] ?? '').trim(),
+          fullName: String(row['Họ tên'] ?? '').trim(),
+          className: String(row['Mã lớp'] ?? '').trim(),
+          dateOfBirth: normalizeDateOfBirth(row['Ngày sinh']),
+          gender: String(row['Giới tính'] ?? '').trim(),
+          schoolStatus: String(row['Trạng thái HS'] ?? '').trim(),
+        }));
+        const res = await fetch('/api/students/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: roster }) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? 'Không thể đối chiếu danh sách');
+        setRosterRows(roster); setRosterPreview(data);
+        toast.success('Đã đối chiếu tệp mới. Xem kết quả trước khi cập nhật.');
+        return;
+      }
       const schoolExport = String(sheet.A7?.v ?? '').trim().toUpperCase() === 'STT';
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', ...(schoolExport ? { range: 6 } : {}) });
       if (schoolExport) {
@@ -114,6 +134,32 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const applyRoster = async () => {
+    if (!rosterRows.length || !rosterPreview) return;
+    setImporting(true);
+    try {
+      const res = await fetch('/api/students/reconcile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: rosterRows, apply: true }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Không thể cập nhật danh sách');
+      setRosterPreview({ ...rosterPreview, applied: data });
+      toast.success(`Đã bổ sung ${data.added}, cập nhật ${data.updated}, chuyển lớp ${data.moved}. Giữ nguyên trạng thái thanh toán.`);
+      loadStudents();
+    } catch (error: any) { toast.error(error.message ?? 'Không thể cập nhật'); }
+    finally { setImporting(false); }
+  };
+
+  const downloadRosterReview = () => {
+    if (!rosterPreview) return;
+    const records = [
+      ...(rosterPreview.review ?? []).map((item: any) => ({ 'Nguồn': 'Tệp mới', 'Mã học sinh': item.code, 'Họ tên': item.name, 'Lớp tệp mới': item.sourceClass, 'Lớp hiện tại': item.currentClass ?? '', 'Trạng thái tệp': item.schoolStatus, 'Đã đóng': item.paid ? 'Có' : '', 'Cần kiểm tra': item.reason })),
+      ...(rosterPreview.absent ?? []).map((item: any) => ({ 'Nguồn': 'Website', 'Mã học sinh': item.code, 'Họ tên': item.name, 'Lớp tệp mới': '', 'Lớp hiện tại': item.currentClass, 'Trạng thái tệp': 'Không có tên', 'Đã đóng': item.paid ? 'Có' : 'Không', 'Cần kiểm tra': item.reason })),
+    ];
+    const sheet = XLSX.utils.json_to_sheet(records);
+    sheet['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 12 }, { wch: 65 }];
+    const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, 'Cần rà soát');
+    XLSX.writeFile(book, 'hoc-sinh-can-ra-soat.xlsx');
   };
 
   const handleImportJson = async () => {
@@ -207,6 +253,19 @@ export function StudentsClient({ adminRole }: { adminRole?: string }) {
           <Button variant="outline" onClick={downloadTemplate}><Download className="h-4 w-4 mr-1" /> Tải tệp mẫu</Button>
           <Button variant="outline" disabled={importing} onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}</Button>
           <Button variant="outline" onClick={() => setJsonImportOpen((value) => !value)}>Nhập JSON</Button>
+          {rosterPreview && <div className="basis-full rounded-lg border bg-muted/30 p-4 space-y-3 text-sm">
+            <h2 className="font-semibold">Đối chiếu danh sách học sinh mới ({rosterPreview.total ?? rosterRows.length} dòng)</h2>
+            <p>Bổ sung: {rosterPreview.summary?.add ?? 0} • Cập nhật: {rosterPreview.summary?.update ?? 0} • Chuyển lớp: {rosterPreview.summary?.move ?? 0} • Hồ sơ đã đóng giữ nguyên: {rosterPreview.summary?.paid ?? 0}</p>
+            <p>Cần rà soát trong tệp: {rosterPreview.summary?.review ?? 0} • Đang có trên website nhưng không có trong tệp: {rosterPreview.summary?.absent ?? 0}</p>
+            <p className="text-muted-foreground">Học sinh vắng trong tệp, chuyển đi hoặc thôi học chỉ được đưa vào danh sách rà soát; hệ thống không tự xóa hay thay đổi xác nhận đã đóng.</p>
+            {rosterPreview.applied && <p className="font-semibold text-primary">Đã cập nhật: thêm {rosterPreview.applied.added}, sửa {rosterPreview.applied.updated}, chuyển lớp {rosterPreview.applied.moved}.</p>}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={downloadRosterReview}><Download className="h-4 w-4 mr-1" /> Tải Excel cần rà soát</Button>
+              {!rosterPreview.applied && <Button disabled={importing} onClick={applyRoster}>{importing ? 'Đang cập nhật...' : 'Cập nhật học sinh hợp lệ'}</Button>}
+              <Button variant="ghost" onClick={() => { setRosterRows([]); setRosterPreview(null); }}>Đóng đối chiếu</Button>
+            </div>
+            {(rosterPreview.absent ?? []).slice(0, 25).map((item: any) => <p key={item.id}>{item.code} — {item.name} — {item.currentClass} — {item.paid ? 'Đã đóng, giữ hồ sơ' : 'Cần xác minh nghỉ/chuyển trường'}</p>)}
+          </div>}
           {jsonImportOpen && <div className="basis-full rounded-lg border border-border bg-muted/30 p-3 space-y-2">
             <Label htmlFor="student-json-import">Dán dữ liệu JSON học sinh</Label>
             <Textarea id="student-json-import" placeholder="Dữ liệu JSON dạng mảng, dùng cùng cột của tệp Excel" value={jsonImport} onChange={(event) => setJsonImport(event.target.value)} className="min-h-28 font-mono text-xs" />
