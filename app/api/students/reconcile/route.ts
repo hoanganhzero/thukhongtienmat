@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     for (const [index, row] of rows.entries()) {
       const source = { line: index + 2, code: row.studentCode, name: row.fullName, sourceClass: row.className, schoolStatus: row.schoolStatus };
       if (!row.studentCode || !row.fullName || !/^\d{4}-\d{2}-\d{2}$/.test(row.dateOfBirth) ||
-        Number.isNaN(new Date(row.dateOfBirth).getTime()) || !['Nam', 'Nữ'].includes(row.gender) || !row.className) {
+        Number.isNaN(new Date(row.dateOfBirth).getTime()) || new Date(row.dateOfBirth).toISOString().slice(0, 10) !== row.dateOfBirth || !['Nam', 'Nữ'].includes(row.gender) || !row.className) {
         review.push({ ...source, reason: 'Thiếu hoặc sai mã, ngày sinh, giới tính, lớp' }); continue;
       }
       if (seenCodes.has(row.studentCode)) { review.push({ ...source, reason: 'Trùng mã trong tệp' }); continue; }
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       }
       if (match && seenMatches.has(match.id)) { review.push({ ...source, currentClass: match.class.name, reason: 'Hai dòng cùng khớp một hồ sơ' }); continue; }
       if (match) seenMatches.add(match.id);
-      const confirmed = match?.feeAssignments.some((fee) => fee.status === 'confirmed') ?? false;
+      const confirmed = match?.feeAssignments.some((fee) => fee.status === 'confirmed' && /BHTT/i.test(fee.feeType.name)) ?? false;
       if (!activeStatus(row.schoolStatus)) {
         review.push({ ...source, currentClass: match?.class.name ?? '', paid: confirmed, reason: 'Chuyển đi/thôi học: kiểm tra trước khi xử lý' }); continue;
       }
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
     }
     const absent = existing.filter((student) => !student.deletedAt && !represented.has(student.id)).map((student) => ({
       id: student.id, code: student.studentCode, name: student.fullName, currentClass: student.class.name,
-      campus: student.class.campus.name, paid: student.feeAssignments.some((fee) => fee.status === 'confirmed'),
+      campus: student.class.campus.name, paid: student.feeAssignments.some((fee) => fee.status === 'confirmed' && /BHTT/i.test(fee.feeType.name)),
       reason: 'Không có trong tệp mới: kiểm tra chuyển trường/nghỉ học trước khi xóa',
     }));
     if (body.apply === true) {
